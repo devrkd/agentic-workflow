@@ -1,4 +1,4 @@
-# Three-Agent Claude Code Template
+# Agentic Worklfow
 
 Four coordinated AI agents (Orchestrator, Architect, Developer, Staff) running in Claude Code, backed by ClickUp, GitHub, Slite, and Figma via MCP.
 
@@ -15,7 +15,7 @@ claude  # start Claude Code from this repo root, approve MCP servers when prompt
 | Command | Model | Role |
 |---------|-------|------|
 | `/orchestrator [task-id] ...` | Haiku | Dispatches to Architect or Developer; never touches code |
-| `/architect [task-id]` | Sonnet (Opus when dispatched by Orchestrator) | Design, ADR authoring, repo intel; writes `.tmp/<task-id>/handoff.json` |
+| `/architect [task detail with document id or github link]` | Sonnet | Design, ADR authoring, repo intel; writes `.tmp/<task-id>/handoff.json` |
 | `/developer [task-id] [fr-label]` | Sonnet | Implementation; reads `handoff.json`, halts if `adr_url` missing |
 | `/staff [free-form request]` | Opus | Deep analysis; reads all MCPs; never writes to external systems |
 
