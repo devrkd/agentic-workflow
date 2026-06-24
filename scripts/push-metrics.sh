@@ -5,13 +5,13 @@
 # Optional env:
 #   CLAUDE_METRICS_PROJECT  — project label (default: basename of $PWD)
 #   CLAUDE_SESSION_NAME     — override the auto-derived session name
-#   CLAUDE_SESSIONS_DB      — SQLite path (default: ~/claude-metrics/sessions.db)
+#   CLAUDE_SESSIONS_DB      — SQLite path (default: metrics/data/sessions.db)
 
 set -euo pipefail
 
 PROJECT="${CLAUDE_METRICS_PROJECT:-$(basename "$PWD")}"
 CUSTOM_SESSION_NAME="${CLAUDE_SESSION_NAME:-}"
-SESSIONS_DB="${CLAUDE_SESSIONS_DB:-$HOME/claude-metrics/sessions.db}"
+SESSIONS_DB="${CLAUDE_SESSIONS_DB:-metrics/data/sessions.db}"
 
 payload=$(cat)
 
