@@ -1,0 +1,29 @@
+{
+  "task_id": "RTD-541",
+  "adr_url": "https://slite.com/api/notes/example-adr-id",
+  "adr_approved_at": "2026-05-08T12:00:00Z",
+  "skip_clickup": true,
+  "figma_frames": [
+    {
+      "url": "https://www.figma.com/design/abc123/File",
+      "summary": "Example frame: login form layout."
+    }
+  ],
+  "sub_tasks": [
+    {
+      "id": null,
+      "url": null,
+      "fr": "FR1",
+      "branch": "agent/RTD-541/fr1",
+      "worktree_backend": "/path/to/workspace/.worktrees/RTD-541/dev-001",
+      "worktree_frontend": "",
+      "scope": "Implement hello endpoint per ADR section FR1.",
+      "acceptance_criteria": [
+        "GET /hello returns 200 with expected body"
+      ],
+      "verification_commands": [
+        "./gradlew :service:test"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+{
+  "title": "Claude Code Usage",
+  "uid": "claude-usage",
+  "version": 8,
+  "schemaVersion": 38,
+  "refresh": "1m",
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "days",
+        "label": "Last N days",
+        "type": "custom",
+        "query": "7,14,30,90,365",
+        "current": { "selected": true, "text": "30", "value": "30" },
+        "options": [
+          { "selected": false, "text": "7",   "value": "7"   },
+          { "selected": false, "text": "14",  "value": "14"  },
+          { "selected": true,  "text": "30",  "value": "30"  },
+          { "selected": false, "text": "90",  "value": "90"  },
+          { "selected": false, "text": "365", "value": "365" }
+        ],
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+
+    { "id": 1, "title": "Total Cost (incl. subagents)", "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT ROUND(COALESCE((SELECT SUM(cost_usd) FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)), 0) + COALESCE((SELECT SUM(cost_usd) FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)), 0), 4) as \"Total Cost\"",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 50, "title": "Subagent Cost", "type": "stat",
+      "gridPos": { "x": 5, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT ROUND(SUM(cost_usd), 4) as \"Subagent Cost\" FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 2, "title": "Sessions", "type": "stat",
+      "gridPos": { "x": 10, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "decimals": 0 } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT COUNT(*) as \"Sessions\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 3, "title": "Commands (turns)", "type": "stat",
+      "gridPos": { "x": 15, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "decimals": 0 } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT COUNT(*) as \"Commands\" FROM turns WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 4, "title": "Avg Cost / Session", "type": "stat",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT ROUND(AVG(cost_usd), 4) as \"Avg Cost\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 5, "title": "Daily Cost Trend", "type": "barchart",
+      "gridPos": { "x": 0, "y": 4, "w": 16, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "vertical", "xTickLabelRotation": -30, "stacking": "normal",
+        "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT d as \"Date\", ROUND(COALESCE(SUM(CASE WHEN src='session' THEN cost ELSE 0 END), 0), 4) as \"Sessions\", ROUND(COALESCE(SUM(CASE WHEN src='subagent' THEN cost ELSE 0 END), 0), 4) as \"Subagents\" FROM (SELECT date(started_at) as d, cost_usd as cost, 'session' as src FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) UNION ALL SELECT date(started_at), cost_usd, 'subagent' FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)) GROUP BY d ORDER BY d ASC",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 6, "title": "Cost by Model", "type": "piechart",
+      "gridPos": { "x": 16, "y": 4, "w": 8, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "pieType": "pie", "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT ROUND(SUM(CASE WHEN model LIKE 'claude-opus-4%' THEN cost_usd ELSE 0 END),4) as \"Opus 4\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-4-6%' THEN cost_usd ELSE 0 END),4) as \"Sonnet 4.6\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-4-5%' THEN cost_usd ELSE 0 END),4) as \"Sonnet 4.5\", ROUND(SUM(CASE WHEN model LIKE 'claude-haiku-4%' THEN cost_usd ELSE 0 END),4) as \"Haiku 4\", ROUND(SUM(CASE WHEN model LIKE 'claude-opus-3%' THEN cost_usd ELSE 0 END),4) as \"Opus 3\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-3%' THEN cost_usd ELSE 0 END),4) as \"Sonnet 3\", ROUND(SUM(CASE WHEN model LIKE 'claude-haiku-3%' THEN cost_usd ELSE 0 END),4) as \"Haiku 3\" FROM (SELECT model, cost_usd FROM turns WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND model NOT LIKE '<%' UNION ALL SELECT model, cost_usd FROM subagent_turns WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND model NOT LIKE '<%')",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 7, "title": "Cost by Project", "type": "barchart",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "horizontal", "stacking": "normal", "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT project as \"Project\", ROUND(SUM(CASE WHEN src='session' THEN cost ELSE 0 END), 4) as \"Sessions\", ROUND(SUM(CASE WHEN src='subagent' THEN cost ELSE 0 END), 4) as \"Subagents\" FROM (SELECT project, cost_usd as cost, 'session' as src FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) UNION ALL SELECT project, cost_usd, 'subagent' FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER)) GROUP BY project ORDER BY SUM(cost) DESC",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 8, "title": "Daily Input / Output Tokens", "type": "barchart",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": {} },
+      "options": { "orientation": "vertical", "xTickLabelRotation": -30, "stacking": "normal",
+        "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT date(started_at) as \"Date\", SUM(input_tokens) as \"Input\", SUM(output_tokens) as \"Output\", SUM(cache_read_tokens) as \"Cache Read\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) GROUP BY date(started_at) ORDER BY 1 ASC",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 10, "title": "Sessions", "type": "row", "collapsed": false,
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 1 }
+    },
+
+    { "id": 11, "title": "Session Detail", "type": "table",
+      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 12 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Cost USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 4 }] },
+          { "matcher": { "id": "byName", "options": "Session" },
+            "properties": [{ "id": "custom.width", "value": 380 }] },
+          { "matcher": { "id": "byName", "options": "Started" },
+            "properties": [{ "id": "custom.width", "value": 140 }] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Started", "desc": true }] },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT strftime('%Y-%m-%d %H:%M', started_at) as \"Started\", name as \"Session\", project as \"Project\", CASE WHEN model LIKE 'claude-opus-4%' THEN 'Opus 4' WHEN model LIKE 'claude-sonnet-4-6%' THEN 'Sonnet 4.6' WHEN model LIKE 'claude-sonnet-4-5%' THEN 'Sonnet 4.5' WHEN model LIKE 'claude-sonnet-4%' THEN 'Sonnet 4' WHEN model LIKE 'claude-haiku-4%' THEN 'Haiku 4' WHEN model LIKE 'claude-opus-3%' THEN 'Opus 3' WHEN model LIKE 'claude-sonnet-3%' THEN 'Sonnet 3' WHEN model LIKE 'claude-haiku-3%' THEN 'Haiku 3' ELSE model END as \"Model\", turns as \"Turns\", printf('%d:%02d', duration_s/60, duration_s%60) as \"Duration\", input_tokens as \"Input\", output_tokens as \"Output\", cache_read_tokens as \"Cache Read\", cache_creation_tokens as \"Cache Write\", ROUND(cost_usd, 4) as \"Cost USD\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) ORDER BY started_at DESC",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 20, "title": "Commands", "type": "row", "collapsed": false,
+      "gridPos": { "x": 0, "y": 33, "w": 24, "h": 1 }
+    },
+
+    { "id": 21, "title": "Per-Command Token & Cost Detail", "type": "table",
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 14 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Cost USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 5 }] },
+          { "matcher": { "id": "byName", "options": "Session" },
+            "properties": [{ "id": "custom.width", "value": 320 }] },
+          { "matcher": { "id": "byName", "options": "Time" },
+            "properties": [{ "id": "custom.width", "value": 140 }] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Time", "desc": true }] },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT strftime('%Y-%m-%d %H:%M', t.timestamp) as \"Time\", t.turn_index + 1 as \"#\", s.name as \"Session\", t.project as \"Project\", CASE WHEN t.model LIKE 'claude-opus-4%' THEN 'Opus 4' WHEN t.model LIKE 'claude-sonnet-4-6%' THEN 'Sonnet 4.6' WHEN t.model LIKE 'claude-sonnet-4-5%' THEN 'Sonnet 4.5' WHEN t.model LIKE 'claude-sonnet-4%' THEN 'Sonnet 4' WHEN t.model LIKE 'claude-haiku-4%' THEN 'Haiku 4' WHEN t.model LIKE 'claude-opus-3%' THEN 'Opus 3' WHEN t.model LIKE 'claude-sonnet-3%' THEN 'Sonnet 3' WHEN t.model LIKE 'claude-haiku-3%' THEN 'Haiku 3' ELSE t.model END as \"Model\", t.input_tokens as \"Input\", t.output_tokens as \"Output\", t.cache_read_tokens as \"Cache Read\", t.cache_write_tokens as \"Cache Write\", ROUND(t.cost_usd, 5) as \"Cost USD\" FROM turns t LEFT JOIN sessions s ON t.session_id = s.id WHERE CAST(strftime('%s', t.timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND t.model NOT LIKE '<%' ORDER BY t.timestamp DESC LIMIT 2000",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 30, "title": "Analysis", "type": "row", "collapsed": false,
+      "gridPos": { "x": 0, "y": 48, "w": 24, "h": 1 }
+    },
+
+    { "id": 31, "title": "Top 10 Most Expensive Sessions", "type": "barchart",
+      "gridPos": { "x": 0, "y": 49, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT SUBSTR(name, 1, 55) as \"Session\", ROUND(cost_usd, 4) as \"Cost USD\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) ORDER BY cost_usd DESC LIMIT 10",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 32, "title": "Cost per Turn Distribution", "type": "barchart",
+      "gridPos": { "x": 12, "y": 49, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": {} },
+      "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT CASE WHEN cost_usd < 0.001 THEN '< $0.001' WHEN cost_usd < 0.01 THEN '$0.001-0.01' WHEN cost_usd < 0.05 THEN '$0.01-0.05' WHEN cost_usd < 0.10 THEN '$0.05-0.10' ELSE '> $0.10' END as \"Cost Range\", COUNT(*) as \"Commands\" FROM turns WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND model NOT LIKE '<%' GROUP BY 1 ORDER BY MIN(cost_usd)",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 33, "title": "Tokens per Turn — Avg by Model", "type": "barchart",
+      "gridPos": { "x": 0, "y": 57, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": {} },
+      "options": { "orientation": "vertical", "stacking": "none",
+        "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT CASE WHEN model LIKE 'claude-opus-4%' THEN 'Opus 4' WHEN model LIKE 'claude-sonnet-4-6%' THEN 'Sonnet 4.6' WHEN model LIKE 'claude-sonnet-4-5%' THEN 'Sonnet 4.5' WHEN model LIKE 'claude-sonnet-4%' THEN 'Sonnet 4' WHEN model LIKE 'claude-haiku-4%' THEN 'Haiku 4' WHEN model LIKE 'claude-opus-3%' THEN 'Opus 3' WHEN model LIKE 'claude-sonnet-3%' THEN 'Sonnet 3' WHEN model LIKE 'claude-haiku-3%' THEN 'Haiku 3' ELSE model END as \"Model\", ROUND(AVG(input_tokens)) as \"Avg Input\", ROUND(AVG(output_tokens)) as \"Avg Output\" FROM turns WHERE CAST(strftime('%s', timestamp) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND model NOT LIKE '<%' GROUP BY 1 ORDER BY 1",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 34, "title": "Cache Efficiency by Session", "type": "barchart",
+      "gridPos": { "x": 12, "y": 57, "w": 12, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": {} },
+      "options": { "orientation": "horizontal", "stacking": "normal",
+        "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT SUBSTR(name, 1, 40) as \"Session\", input_tokens as \"Input\", cache_read_tokens as \"Cache Read\", cache_creation_tokens as \"Cache Write\" FROM sessions WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) AND (cache_read_tokens > 0 OR cache_creation_tokens > 0) ORDER BY cost_usd DESC LIMIT 15",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 60, "title": "Subagents", "type": "row", "collapsed": false,
+      "gridPos": { "x": 0, "y": 65, "w": 24, "h": 1 }
+    },
+
+    { "id": 61, "title": "Subagent Cost by Type & Model", "type": "barchart",
+      "gridPos": { "x": 0, "y": 66, "w": 8, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "horizontal", "stacking": "normal", "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT COALESCE(NULLIF(agent_type,''), 'unknown') as \"Type\", ROUND(SUM(CASE WHEN model LIKE 'claude-opus-4%' THEN cost_usd ELSE 0 END), 4) as \"Opus 4\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-4-6%' THEN cost_usd ELSE 0 END), 4) as \"Sonnet 4.6\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-4-5%' THEN cost_usd ELSE 0 END), 4) as \"Sonnet 4.5\", ROUND(SUM(CASE WHEN model LIKE 'claude-haiku-4%' THEN cost_usd ELSE 0 END), 4) as \"Haiku 4\", ROUND(SUM(CASE WHEN model LIKE 'claude-opus-3%' THEN cost_usd ELSE 0 END), 4) as \"Opus 3\", ROUND(SUM(CASE WHEN model LIKE 'claude-sonnet-3%' THEN cost_usd ELSE 0 END), 4) as \"Sonnet 3\", ROUND(SUM(CASE WHEN model LIKE 'claude-haiku-3%' THEN cost_usd ELSE 0 END), 4) as \"Haiku 3\" FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) GROUP BY 1 ORDER BY SUM(cost_usd) DESC",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 62, "title": "Top Subagents by Cost", "type": "barchart",
+      "gridPos": { "x": 8, "y": 66, "w": 16, "h": 8 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "horizontal", "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT COALESCE(NULLIF(SUBSTR(description,1,50),''), id) as \"Subagent\", ROUND(cost_usd, 4) as \"Cost USD\" FROM subagents WHERE CAST(strftime('%s', started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) ORDER BY cost_usd DESC LIMIT 15",
+        "queryType": "table", "timeColumns": [] }]
+    },
+
+    { "id": 63, "title": "Subagent Detail", "type": "table",
+      "gridPos": { "x": 0, "y": 74, "w": 24, "h": 12 },
+      "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Cost USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 4 }] },
+          { "matcher": { "id": "byName", "options": "Description" },
+            "properties": [{ "id": "custom.width", "value": 320 }] },
+          { "matcher": { "id": "byName", "options": "Started" },
+            "properties": [{ "id": "custom.width", "value": 140 }] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Started", "desc": true }] },
+      "targets": [{ "datasource": { "type": "frser-sqlite-datasource", "uid": "claude-sessions-sqlite" },
+        "rawQueryText": "SELECT strftime('%Y-%m-%d %H:%M', a.started_at) as \"Started\", COALESCE(NULLIF(a.agent_type,''), 'agent') as \"Type\", a.description as \"Description\", a.project as \"Project\", CASE WHEN a.model LIKE 'claude-opus-4%' THEN 'Opus 4' WHEN a.model LIKE 'claude-sonnet-4-6%' THEN 'Sonnet 4.6' WHEN a.model LIKE 'claude-sonnet-4-5%' THEN 'Sonnet 4.5' WHEN a.model LIKE 'claude-sonnet-4%' THEN 'Sonnet 4' WHEN a.model LIKE 'claude-haiku-4%' THEN 'Haiku 4' ELSE a.model END as \"Model\", a.turns as \"Turns\", a.input_tokens as \"Input\", a.output_tokens as \"Output\", a.cache_read_tokens as \"Cache Read\", ROUND(a.cost_usd, 4) as \"Cost USD\", SUBSTR(s.name, 1, 60) as \"Parent Session\" FROM subagents a LEFT JOIN sessions s ON a.session_id = s.id WHERE CAST(strftime('%s', a.started_at) AS INTEGER) >= CAST(strftime('%s', 'now', '-$days days') AS INTEGER) ORDER BY a.started_at DESC",
+        "queryType": "table", "timeColumns": [] }]
+    }
+
+  ]
+}

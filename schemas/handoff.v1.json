@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-handoff-v1",
+  "title": "Architect to Developer handoff (v1)",
+  "description": "Written by Architect to .tmp/<task-id>/handoff.json after ADR human approval. Developer reads this file; do not rely on chat copy-paste.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "adr_url",
+    "adr_approved_at",
+    "sub_tasks"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Same identifier as slash command argument (e.g. RTD-541)."
+    },
+    "adr_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Approved Slite ADR document URL."
+    },
+    "adr_approved_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp when human approved the ADR."
+    },
+    "skip_clickup": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, sub_task id/url may be null; FRs referenced by label only."
+    },
+    "figma_frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "sub_tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fr",
+          "branch",
+          "scope",
+          "acceptance_criteria",
+          "verification_commands"
+        ],
+        "properties": {
+          "id": {
+            "type": ["string", "null"],
+            "description": "ClickUp sub-task id; null when skip_clickup."
+          },
+          "url": {
+            "type": ["string", "null"],
+            "description": "ClickUp sub-task URL; null when skip_clickup."
+          },
+          "fr": { "type": "string" },
+          "branch": { "type": "string" },
+          "worktree_backend": {
+            "type": "string",
+            "description": "Absolute path; omit or empty if not applicable."
+          },
+          "worktree_frontend": {
+            "type": "string",
+            "description": "Absolute path; omit or empty if not applicable."
+          },
+          "scope": { "type": "string" },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "verification_commands": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

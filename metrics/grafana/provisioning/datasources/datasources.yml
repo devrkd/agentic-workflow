@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: Claude Sessions DB
+    type: frser-sqlite-datasource
+    uid: claude-sessions-sqlite
+    isDefault: true
+    editable: false
+    jsonData:
+      path: /claude-data/sessions.db

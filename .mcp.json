@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      },
+      "oauth": false
+    },
+    "slite": {
+      "type": "remote",
+      "url": "https://api.slite.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${SLITE_API_TOKEN}"
+      },
+      "oauth": false
+    },
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+      }
+    }
+  }
+}

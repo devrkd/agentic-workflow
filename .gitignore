@@ -1,0 +1,10 @@
+.env
+node_modules/
+.DS_Store
+.repos/
+.worktrees/
+.tmp/
+token-usage.db
+token-usage.db-shm
+token-usage.db-wal
+settings.local.json
