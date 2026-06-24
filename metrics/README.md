@@ -2,6 +2,8 @@
 
 Grafana dashboard for accurate Claude Code token and cost tracking, backed by SQLite.
 
+![Claude Code Usage Dashboard](dashboard.png)
+
 ## Start
 
 ```bash
@@ -83,6 +85,34 @@ One row per unique assistant response within a session.
 | `cache_read_tokens` | INTEGER | Cache reads this turn |
 | `cache_write_tokens` | INTEGER | Cache writes this turn |
 | `cost_usd` | REAL | Cost for this turn |
+
+## Cost calculation
+
+Each assistant turn's cost is computed from the token counts reported by the API using Anthropic list prices:
+
+```
+cost = (input_tokens    × input_price/M)
+     + (output_tokens   × output_price/M)
+     + (cache_read_tokens     × cache_read_price/M)
+     + (cache_creation_tokens × cache_write_price/M)
+```
+
+Prices per million tokens (as of June 2026):
+
+| Model | Input | Output | Cache read | Cache write |
+|-------|------:|-------:|-----------:|------------:|
+| Claude Opus 4 / 3 | $15.00 | $75.00 | $1.50 | $18.75 |
+| Claude Sonnet 4 / 3 | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Haiku 4 | $0.80 | $4.00 | $0.08 | $1.00 |
+| Claude Haiku 3 | $0.25 | $1.25 | $0.03 | $0.30 |
+
+The model is matched by prefix (e.g. `claude-sonnet-4-6` matches `claude-sonnet-4`). Unrecognised models fall back to Sonnet 4 pricing.
+
+**Session cost** is the sum of all turn costs within that session.
+
+**Total Cost (incl. subagents)** shown in the dashboard is the sum of session costs plus all subagent costs — subagents run in separate transcript files and are tracked in the `subagents` / `subagent_turns` tables. The **Subagent Cost** stat shows just the subagent portion, so `Total = Sessions + Subagents`.
+
+Cache reads are significantly cheaper (10× less than input) — high cache-read ratios indicate effective prompt caching and lower real-world cost for repeated context.
 
 ## Ad-hoc analysis
 

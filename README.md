@@ -40,7 +40,7 @@ schemas/                handoff.v1.json schema + example
 scripts/
   new-worktree.sh       Provision isolated git worktrees per task/role
   clone-repo-for-analysis.sh  Shallow-clone product repos for Architect analysis
-metrics/                Prometheus + Grafana observability stack
+metrics/                Prometheus + Grafana observability stack → [metrics/README.md](metrics/README.md)
 rules/                  Shared workflow rules (approval gate, disclaimers, cleanup, etc.)
 HANDOFF.md              Handoff contract reference
 .env.example            Required environment variables
