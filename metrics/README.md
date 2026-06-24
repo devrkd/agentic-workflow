@@ -18,11 +18,11 @@ First start downloads the `frser-sqlite-datasource` plugin — takes ~30s extra.
 docker compose down
 ```
 
-Session data lives in `~/claude-metrics/sessions.db` on the host — it survives container restarts. To wipe everything:
+Session data lives in `metrics/data/sessions.db` inside the project — it survives container restarts. To wipe everything:
 
 ```bash
 docker compose down -v
-rm ~/claude-metrics/sessions.db
+rm -rf data/
 ```
 
 ## How it works
@@ -42,7 +42,7 @@ Claude Code fires a `Stop` hook at the end of every session. The hook runs
 |---|---|---|
 | `CLAUDE_METRICS_PROJECT` | `basename $PWD` | Project label |
 | `CLAUDE_SESSION_NAME` | _(first user message)_ | Override session name |
-| `CLAUDE_SESSIONS_DB` | `~/claude-metrics/sessions.db` | SQLite path |
+| `CLAUDE_SESSIONS_DB` | `metrics/data/sessions.db` | SQLite path |
 
 ## Database schema
 

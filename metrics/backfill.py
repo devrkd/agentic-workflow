@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
-DB_PATH      = Path.home() / "claude-metrics" / "sessions.db"
+DB_PATH      = Path(__file__).parent / "data" / "sessions.db"
 
 PRICES = {
     "claude-opus-4":   (15.00, 75.00, 1.50, 18.75),

@@ -7,4 +7,5 @@ node_modules/
 token-usage.db
 token-usage.db-shm
 token-usage.db-wal
+metrics/data/
 settings.local.json
