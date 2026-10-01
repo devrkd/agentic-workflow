@@ -214,6 +214,16 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     })
   }
 
+  /** Extract a readable message from whatever shape a submit error came in. */
+  function describeError(error: unknown): string {
+    if (error instanceof Error) return error.message
+    const data = (error as { data?: { message?: string } }).data
+    if (data && typeof data.message === "string") return data.message
+    const name = (error as { name?: string }).name
+    if (typeof name === "string") return name
+    return String(error)
+  }
+
   async function onPermission(permission: PermissionInfo): Promise<void> {
     if (!permission.id || !permission.sessionID) return
     const hadThread = sessions.has(permission.sessionID)
@@ -319,7 +329,10 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
   async function submitQuestion(requestID: string): Promise<void> {
     const pending = pendingQuestions.get(requestID)
-    if (!pending) return
+    if (!pending) {
+      await log("warn", "ignored stale question action", { requestID })
+      return
+    }
     const answers = pending.info.questions.map((_, index) => pending.selected[index] ?? [])
     if (answers.some((answer) => answer.length === 0)) {
       await renderQuestion(requestID, "Answer every question before submitting.")
@@ -343,7 +356,10 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
   async function rejectQuestion(requestID: string): Promise<void> {
     const pending = pendingQuestions.get(requestID)
-    if (!pending) return
+    if (!pending) {
+      await log("warn", "ignored stale question action", { requestID })
+      return
+    }
     try {
       const url = new URL(`/question/${requestID}/reject`, serverUrl)
       url.searchParams.set("directory", input.directory)
@@ -417,6 +433,56 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       })
     } catch {
       // best-effort
+    }
+  }
+
+  /**
+   * Resolves every pending permission/question card registered for a session:
+   * entries are removed from the pending maps and their Slack cards are
+   * updated to a resolved label (best-effort). Used when a session is deleted
+   * so no orphan approval cards linger and stale state can't resolve
+   * unrelated sessions.
+   */
+  async function resolvePendingForSession(sessionID: string, label: string): Promise<void> {
+    for (const [id, pending] of [...pendingPermissions]) {
+      if (pending.sessionID !== sessionID) continue
+      pendingPermissions.delete(id)
+      await log("info", "orphaned card resolved", {
+        sessionID,
+        label,
+        kind: "permission",
+        permissionID: id,
+      })
+      try {
+        await web.chat.update({
+          channel: pending.channel,
+          ts: pending.ts,
+          text: label,
+          blocks: resolvedBlocks(`*${label}*`),
+        })
+      } catch {
+        // best-effort
+      }
+    }
+    for (const [id, pending] of [...pendingQuestions]) {
+      if (pending.sessionID !== sessionID) continue
+      pendingQuestions.delete(id)
+      await log("info", "orphaned card resolved", {
+        sessionID,
+        label,
+        kind: "question",
+        requestID: id,
+      })
+      try {
+        await web.chat.update({
+          channel: pending.channel,
+          ts: pending.ts,
+          text: label,
+          blocks: resolvedBlocks(`*${label}*`),
+        })
+      } catch {
+        // best-effort
+      }
     }
   }
 
@@ -522,7 +588,11 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       }
       case "session.deleted": {
         const info = event.properties as { info?: { id?: string } }
-        if (info.info?.id) sessions.delete(info.info.id)
+        const sessionID = info.info?.id
+        if (!sessionID) return
+        childSessions.delete(sessionID)
+        sessions.delete(sessionID)
+        await resolvePendingForSession(sessionID, "Session ended — pending request discarded.")
         return
       }
       default:
@@ -573,11 +643,18 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
     if (kind === "qopt") {
       const requestID = String(payload.requestID ?? "")
+      const pending = pendingQuestions.get(requestID)
+      if (!pending) {
+        await log("warn", "ignored stale question action", {
+          requestID,
+          user: body.user?.id,
+        })
+        return
+      }
       const index = Number(payload.index)
       const label = String(payload.label ?? "")
       const multiple = payload.multiple === true
-      const pending = pendingQuestions.get(requestID)
-      if (!pending || !Number.isInteger(index) || !label) return
+      if (!Number.isInteger(index) || !label) return
       const current = pending.selected[index] ?? []
       if (multiple) {
         pending.selected[index] = current.includes(label)
@@ -626,19 +703,52 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       return
     }
 
+    // Submit the approval. The SDK does not throw on HTTP errors by default
+    // (it returns a result tuple), so inspect both the tuple and any thrown
+    // transport error to tell a genuinely dead session apart from a transient
+    // failure: only discard the pending card when opencode definitively
+    // rejected the submit (4xx).
+    let rejected = false
+    let submitStatus: number | undefined
+    let submitError: unknown
     try {
-      await client.postSessionIdPermissionsPermissionId({
+      const result = await client.postSessionIdPermissionsPermissionId({
         path: { id: sessionID, permissionID },
         body: { response },
       })
+      if (result.error) {
+        rejected = true
+        submitStatus = result.response.status
+        submitError = result.error
+      }
     } catch (error) {
+      rejected = true
+      submitError = error
+      submitStatus = (error as { cause?: { status?: number } }).cause?.status
+    }
+
+    if (rejected) {
+      const deadSession = submitStatus !== undefined && submitStatus >= 400 && submitStatus < 500
+      if (!deadSession) {
+        // Transient failure (5xx, network blip): the session may still be
+        // alive, so keep the pending entry and leave the card live for a
+        // retry instead of burning a pending approval.
+        await log("warn", "approval submit failed; card left live", {
+          permissionID,
+          sessionID,
+          error: describeError(submitError),
+          status: submitStatus,
+        })
+        return
+      }
       // The session (e.g. a finished-but-persisted child) can no longer accept
       // the approval: discard it instead of leaving a live-looking card.
       pendingPermissions.delete(permissionID)
       await log("warn", "approval discarded: session inactive", {
         permissionID,
         sessionID,
-        error: String(error),
+        error: describeError(submitError),
+        status: submitStatus,
       })
       try {
         await web.chat.update({
