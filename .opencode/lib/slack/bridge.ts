@@ -613,17 +613,47 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     const response = payload.response as PermissionAction
     if (!sessionID || !permissionID || !response) return
 
+    // Only honour a button value the bridge itself registered for this
+    // permissionID/sessionID pair — a stale or replayed click for an
+    // already-resolved permission must never be submitted.
+    const pendingPermission = pendingPermissions.get(permissionID)
+    if (!pendingPermission || pendingPermission.sessionID !== sessionID) {
+      await log("warn", "ignored stale approval", {
+        permissionID,
+        sessionID,
+        user: body.user?.id,
+      })
+      return
+    }
+
     try {
       await client.postSessionIdPermissionsPermissionId({
         path: { id: sessionID, permissionID },
         body: { response },
       })
     } catch (error) {
-      await log("error", "failed to submit approval", { error: String(error) })
+      // The session (e.g. a finished-but-persisted child) can no longer accept
+      // the approval: discard it instead of leaving a live-looking card.
+      pendingPermissions.delete(permissionID)
+      await log("warn", "approval discarded: session inactive", {
+        permissionID,
+        sessionID,
+        error: String(error),
+      })
+      try {
+        await web.chat.update({
+          channel: channelID,
+          ts: messageTs,
+          text: "Session no longer active — approval discarded.",
+          blocks: resolvedBlocks("*Session no longer active — approval discarded.*"),
+        })
+      } catch {
+        // best-effort
+      }
       return
     }
     pendingPermissions.delete(permissionID)
-    await log("info", "approval submitted from Slack", { permissionID, response })
+    await log("info", "approval submitted from Slack", { permissionID, sessionID, response })
 
     const label =
       response === "reject"
