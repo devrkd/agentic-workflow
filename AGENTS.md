@@ -1,0 +1,121 @@
+# AGENTS.md
+
+Guidance for running this repository's multi-agent workflow under **opencode**.
+Claude Code users are still supported via [`CLAUDE.md`](CLAUDE.md) and `.claude/`; the two harnesses are kept in parallel.
+
+## What This Repository Is
+
+A harness for four coordinated agents (Orchestrator, Architect, Developer, Staff) backed by **GitHub MCP**. It contains no application code — only agent definitions, commands, skills, schemas, rules, and helper scripts.
+
+## Quick Start
+
+```bash
+cp .env.example .env
+# Required for this opencode setup: GITHUB_TOKEN (repo scope)
+# ClickUp / Slite / Figma are NOT wired for opencode — see MCP below.
+export GITHUB_TOKEN=...   # opencode reads env vars, it does not load .env automatically
+opencode
+```
+
+## Agents (Tab to switch, or use the commands)
+
+| Agent | Mode | Model | Variant | Role |
+|-------|------|-------|---------|------|
+| `orchestrator` | primary | `deepseek/deepseek-flash` | `low` | Classifies intent, dispatches via the `task` tool, never edits product code |
+| `architect` | all | `deepseek/deepseek-v4-pro` | `max` | Design, ADR authoring, repo intel |
+| `developer` | all | `deepseek/deepseek-v4-pro` | `max` | Implementation only; requires a task id |
+| `staff` | all | `deepseek/deepseek-v4-pro` | `max` | Read-only cross-source analysis |
+
+Definitions live in [`.opencode/agent/`](.opencode/agent/).
+
+> Model mapping is set per agent (opencode has no `haiku`/`sonnet`/`opus` aliases). Edit the `model:` field in each `.opencode/agent/*.md` to remap. See `opencode models` for available ids.
+
+## Commands
+
+| Command | Agent | Usage |
+|---------|-------|-------|
+| `/orchestrator` | orchestrator | `/orchestrator RTD-541 implement the checkout fix` |
+| `/architect` | architect | `/architect RTD-541` |
+| `/developer` | developer | `/developer RTD-541 FR1` |
+| `/staff` | staff | `/staff compare docs A and B for gaps` |
+
+Definitions live in [`.opencode/command/`](.opencode/command/).
+
+## Workflow
+
+```
+/orchestrator RTD-541
+  └─► architect              ← design + ADR
+        └─► [human approves ADR]
+              └─► developer  ← implement scoped FR
+                    └─► architect (review) └─► staff (optional deep analysis)
+```
+
+Hard gates (never bypassed):
+1. Repo intel (`architect-github-repo-intel`) must complete before ADR authoring — tech stack confirmed from the actual repo.
+2. ADR must receive human `APPROVED` before Developer starts.
+3. Developer halts if `handoff.json` is missing or `adr_url` is absent.
+
+## Skills
+
+18 skills live in [`.opencode/skills/`](.opencode/skills/) as `<name>/SKILL.md`.
+Agent files reference them by name (`architect-adr-authoring`, `developer-implementation`, `staff-risk-assessment`, …). The list of available skills is also surfaced to the model automatically.
+
+## MCP
+
+opencode is configured with the **GitHub MCP server only** (`opencode.json` → `mcp.github`).
+ClickUp, Slite, and Figma are intentionally **not** wired for opencode. Skills that require them will tell you the source is unavailable and proceed with what is accessible. The Claude Code path (`.mcp.json`, claude.ai connectors) is unchanged.
+
+GitHub tool names are prefixed with the server name: `github_*`. Use `{env:GITHUB_TOKEN}` interpolation syntax in `opencode.json` (not `${...}`).
+
+## File-Based Handoff
+
+After ADR approval, Architect writes `.tmp/<task-id>/handoff.json` (schema: [`schemas/handoff.v1.json`](schemas/handoff.v1.json)). Developer reads it; `adr_url` is mandatory.
+
+## Slack Bridge
+
+An opencode plugin mirrors agent sessions into Slack and lets you answer approvals from Slack instead of the terminal. Useful for long `/architect` or `/developer` runs you want to monitor away from the keyboard.
+
+- **Out** — one thread per session in the configured channel: tool runs, plan (`todo.updated`), completion summary (`session.idle`) and errors.
+- **In** — permission/approval prompts post as interactive messages with **Approve once / Always / Reject** buttons. The agent's `question` tool posts option buttons too. Replying in the thread injects a prompt into the running session; `!abort` stops it.
+
+### Setup
+
+1. Create a Slack app and enable **Socket Mode** (no public URL needed).
+2. Bot scopes: `chat:write`, `channels:read`, plus `channels:history` (public) or `groups:history` (private), `users:read`, `reactions:write`.
+3. Generate an **App-Level Token** with `connections:write`, and **Install** to get the Bot token.
+4. Turn **Interactivity** on (for the approval buttons), and under **Event Subscriptions** subscribe to `message.channels` (public) or `message.groups` (private) so thread replies reach the agent.
+5. `/invite` the app to the target channel and copy its channel ID.
+6. Fill `.env`: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_CHANNEL`, and `SLACK_ALLOWED_USERS` (your Slack member ID — recommended, or anyone in the channel can approve commands).
+7. Start `opencode`; the plugin loads automatically and installs its deps via Bun on first run.
+
+Set `SLACK_BRIDGE=off` to disable without removing tokens. If config is incomplete the plugin logs once and stays inert, so opencode always starts.
+
+Implementation: `.opencode/plugins/slack-bridge.ts` + `.opencode/lib/slack/`. State (`sessionID` → thread) is kept in `.opencode/slack-bridge-state.json`.
+
+### Watching Slack-triggered work in the terminal
+
+The bridge runs inside the opencode server, so anything Slack injects shows up the same way your own typing does.
+
+- **Normal TUI** — run `opencode`. A Slack reply injected into a session streams live in that session's view. Switch sessions to see other threads.
+- **Headless + attach** — run the server, then attach a live TUI:
+  ```bash
+  scripts/slack-server.sh 4096        # opencode serve --port 4096 --print-logs
+  opencode attach http://127.0.0.1:4096
+  ```
+  `opencode web` is the same view in a browser.
+- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `posted completion`) alongside opencode's loop/tool logs.
+
+> The plugin reads `.env` itself, so `SLACK_*` values do not need to be exported. `GITHUB_TOKEN` is still read from the environment by `opencode.json`.
+
+## Shared Assets
+
+- [`rules/`](rules/) — cross-cutting policies (approval gate, disclaimers, cleanup, Figma conflicts)
+- [`schemas/`](schemas/) — handoff and state JSON schemas
+- [`scripts/`](scripts/) — `new-worktree.sh`, `clone-repo-for-analysis.sh`, `healthcheck.sh`, `slack-server.sh`
+- Branch naming: `agent/<task-id>/<role>` (Developer FR branches: `agent/<task-id>/<fr-label>`)
+
+## Notes
+
+- opencode does not run Claude Code `Stop`/`SubagentStop` hooks; `scripts/push-metrics.sh` is Claude-only for now (metrics integration intentionally deferred).
+- `.claude/` is retained for Claude Code users; opencode ignores it except as a rules fallback when no `AGENTS.md` exists.

@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.33",
+    "@opencode-ai/sdk": "1.18.33",
+    "@slack/socket-mode": "^2.0.0",
+    "@slack/types": "^2.0.0",
+    "@slack/web-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.12.2",
+    "typescript": "5.8.2"
+  }
+}
