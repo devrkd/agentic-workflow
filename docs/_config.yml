@@ -1,0 +1,39 @@
+title: Agentic Workflow
+description: A multi-agent development harness for opencode — four coordinated agents, slash commands, skills, schemas, rules, and a Slack bridge
+markdown: GFM
+
+# Google Analytics 4 is deliberately disabled: `ga_id` is left unset, so the
+# layout emits no GA loader, consent default, or consent banner. To enable
+# analytics later, add a `ga_id: G-XXXXXXXXXX` line here (gtag.js + consent
+# mode are already wired into _layouts/default.html).
+
+# GitHub Pages project site — makes absolute/relative URLs resolve correctly.
+url: https://devrkd.github.io
+baseurl: /agentic-workflow
+
+# Every Markdown page renders through the custom layout in _layouts/default.html.
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+
+# Side navigation ("Pages" group). Labels/URLs here feed _layouts/default.html.
+nav:
+  - label: Home
+    url: /
+  - label: Agents
+    url: /agents.html
+  - label: Commands
+    url: /commands.html
+  - label: Workflow
+    url: /workflow.html
+  - label: Handoff
+    url: /handoff.html
+  - label: Reference
+    url: /reference.html
+  - label: Slack integration
+    url: /slack-integration.html
+  - label: Publishing this site
+    url: /publishing.html
