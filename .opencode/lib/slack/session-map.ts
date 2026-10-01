@@ -6,6 +6,8 @@ export type SessionRef = {
   ts: string
   title: string
   createdAt: number
+  /** Set for child (subagent) session threads; the Slack thread's parent session. */
+  parentID?: string
 }
 
 /**

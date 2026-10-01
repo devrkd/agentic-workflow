@@ -64,6 +64,18 @@ export function sessionRootText(title: string, directory?: string): string {
   return `*Session started* — ${name}${where}\nProgress, approvals and replies stay in this thread.`
 }
 
+/** Root message for a child (subagent) session thread, created lazily. */
+export function childSessionRootText(title: string, parentTitle?: string): string {
+  const name = escapeMrkdwn(truncate(title || "untitled subagent", 120))
+  const parent = parentTitle ? ` _(child of ${escapeMrkdwn(truncate(parentTitle, 80))})_` : ""
+  return `*Subagent session* — ${name}${parent}\nApprovals and replies for this subagent stay in this thread.`
+}
+
+/** One-line notice dropped into the parent thread when a child thread is created. */
+export function childThreadPointerText(childTitle: string): string {
+  return `🛑 Subagent _${escapeMrkdwn(truncate(childTitle, 80))}_ is requesting approval — see its thread below.`
+}
+
 export function toolProgressLine(tool: string, title: string): string {
   const label = escapeMrkdwn(truncate(title || tool, 160))
   return `• \`${tool}\` ${label}`

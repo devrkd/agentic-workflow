@@ -7,6 +7,8 @@ import { loadConfig } from "./config.ts"
 import { SessionMap, type SessionRef } from "./session-map.ts"
 import { LineBatch } from "./throttle.ts"
 import {
+  childSessionRootText,
+  childThreadPointerText,
   errorText,
   idleText,
   normalizePermission,
@@ -102,10 +104,19 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     await postThread(ref, lines.join("\n"))
   })
 
+  async function resolveParentTitle(parentID: string): Promise<string> {
+    try {
+      const parent = await client.session.get({ path: { id: parentID } })
+      return parent.data?.title ?? ""
+    } catch {
+      // best-effort label only
+      return ""
+    }
+  }
+
   async function ensureThread(sessionID: string): Promise<SessionRef | null> {
     const existing = sessions.get(sessionID)
     if (existing) return existing
-    if (childSessions.has(sessionID)) return null
 
     const inflight = threadLocks.get(sessionID)
     if (inflight) return inflight
@@ -119,15 +130,17 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         return null
       }
       if (!info) return null
-      if (info.parentID) {
-        childSessions.add(sessionID)
-        return null
-      }
+      if (info.parentID) childSessions.add(sessionID)
+      const isChild = info.parentID !== undefined
+      const parentTitle = info.parentID ? await resolveParentTitle(info.parentID) : ""
       const title = info.title || "untitled session"
+      const rootText = isChild
+        ? childSessionRootText(title, parentTitle)
+        : sessionRootText(title, info.directory)
       try {
         const posted = await web.chat.postMessage({
           channel: config.channel,
-          text: sessionRootText(title, info.directory),
+          text: rootText,
           mrkdwn: true,
         })
         if (!posted.ts) return null
@@ -136,9 +149,15 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
           ts: posted.ts,
           title,
           createdAt: Date.now(),
+          ...(info.parentID ? { parentID: info.parentID } : {}),
         }
         sessions.set(sessionID, ref)
-        await log("info", "created Slack thread", { sessionID, ts: ref.ts, title })
+        await log("info", "created Slack thread", {
+          sessionID,
+          ts: ref.ts,
+          title,
+          ...(isChild ? { child: true, parentID: info.parentID } : {}),
+        })
         return ref
       } catch {
         return null
@@ -197,8 +216,19 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
   async function onPermission(permission: PermissionInfo): Promise<void> {
     if (!permission.id || !permission.sessionID) return
+    const hadThread = sessions.has(permission.sessionID)
     const ref = await ensureThread(permission.sessionID)
     if (!ref) return
+    if (!hadThread && ref.parentID) {
+      const parent = sessions.get(ref.parentID)
+      if (parent) {
+        await postThread(parent, childThreadPointerText(ref.title))
+        await log("info", "child thread pointer posted", {
+          parentID: ref.parentID,
+          childSessionID: permission.sessionID,
+        })
+      }
+    }
     batch.flushNow(permission.sessionID)
     try {
       const posted = await web.chat.postMessage({
@@ -215,9 +245,10 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
           ts: posted.ts,
           sessionID: permission.sessionID,
         })
-        await log("info", "approval card posted", {
+        await log("info", ref.parentID ? "child approval card posted" : "approval card posted", {
           permissionID: permission.id,
           sessionID: permission.sessionID,
+          ...(ref.parentID ? { parentID: ref.parentID } : {}),
         })
       }
     } catch {
@@ -336,8 +367,19 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
   async function onQuestion(info: QuestionRequestInfo): Promise<void> {
     if (!info.id || !info.sessionID || info.questions.length === 0) return
+    const hadThread = sessions.has(info.sessionID)
     const ref = await ensureThread(info.sessionID)
     if (!ref) return
+    if (!hadThread && ref.parentID) {
+      const parent = sessions.get(ref.parentID)
+      if (parent) {
+        await postThread(parent, childThreadPointerText(ref.title))
+        await log("info", "child thread pointer posted", {
+          parentID: ref.parentID,
+          childSessionID: info.sessionID,
+        })
+      }
+    }
     batch.flushNow(info.sessionID)
     const selected = info.questions.map(() => [] as string[])
     try {
@@ -391,23 +433,24 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       }
       case "session.updated": {
         const info = (event.properties as { info: Session }).info
-        if (info.parentID) {
-          childSessions.add(info.id)
-          return
-        }
+        if (info.parentID) childSessions.add(info.id)
         const ref = sessions.get(info.id)
         if (!ref) {
+          if (info.parentID) return
           await ensureThread(info.id)
           return
         }
         if (info.title && info.title !== ref.title) {
           ref.title = info.title
           sessions.set(info.id, ref)
+          const rootText = ref.parentID
+            ? childSessionRootText(info.title, await resolveParentTitle(ref.parentID))
+            : sessionRootText(info.title, info.directory)
           try {
             await web.chat.update({
               channel: ref.channel,
               ts: ref.ts,
-              text: sessionRootText(info.title, info.directory),
+              text: rootText,
             })
           } catch {
             // best-effort
@@ -417,6 +460,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       }
       case "session.idle": {
         const { sessionID } = event.properties as { sessionID: string }
+        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
         batch.flushNow(sessionID)
         const ref = await ensureThread(sessionID)
         if (!ref) return
@@ -428,6 +472,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       case "session.error": {
         const { sessionID, error } = event.properties as { sessionID?: string; error?: unknown }
         if (!sessionID) return
+        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
         batch.flushNow(sessionID)
         const ref = await ensureThread(sessionID)
         if (!ref) return
@@ -436,6 +481,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       }
       case "todo.updated": {
         const { sessionID, todos } = event.properties as { sessionID: string; todos: Parameters<typeof todoText>[0] }
+        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
         batch.flushNow(sessionID)
         const ref = await ensureThread(sessionID)
         if (!ref) return
@@ -485,7 +531,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
   }
 
   async function onTool(inputTool: ToolHookInput, output: ToolHookOutput): Promise<void> {
-    if (childSessions.has(inputTool.sessionID)) return
+    if (childSessions.has(inputTool.sessionID) && !sessions.has(inputTool.sessionID)) return
     if (!sessions.has(inputTool.sessionID)) {
       const ref = await ensureThread(inputTool.sessionID)
       if (!ref) return
