@@ -35,4 +35,3 @@ Each agent is covered in depth on its page below.
 - [Handoff](handoff.md) — the `handoff.json` contract between Architect and Developer, and the `.tmp/` lifecycle.
 - [Reference](reference.md) — skills, MCP availability, shared assets, guardrails, and the two parallel harnesses.
 - [Slack integration](slack-integration.md) — the Slack bridge plugin: configuration, outbound mirroring, and inbound steering.
-- [Publishing this site](publishing.md) — how these docs are built and deployed on GitHub Pages.

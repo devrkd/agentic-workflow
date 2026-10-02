@@ -35,5 +35,3 @@ nav:
     url: /reference.html
   - label: Slack integration
     url: /slack-integration.html
-  - label: Publishing this site
-    url: /publishing.html
