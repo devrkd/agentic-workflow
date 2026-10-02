@@ -1,4 +1,10 @@
-# Agentic Worklfow
+<p align="center">
+  <img src="assets/mentat-icon.png" alt="Mentat" width="160">
+</p>
+
+# Mentat
+
+*Mentat* is named for the human computers of Frank Herbert's *Dune* — people trained to serve as disciplined logic and strategy engines rather than raw calculators. The name suits this harness: four specialist agents (Orchestrator, Architect, Developer, Staff) apply structured, disciplined reasoning and stop at explicit human approval gates instead of acting autonomously.
 
 Four coordinated AI agents (Orchestrator, Architect, Developer, Staff) running in Claude Code, backed by ClickUp, GitHub, Slite, and Figma via MCP.
 
