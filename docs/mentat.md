@@ -1,4 +1,4 @@
-# The Agentic Workflow (opencode harness)
+# Mentat (opencode harness)
 
 This repository is a **harness for a multi-agent software-development workflow** run under [opencode](https://opencode.ai/). It contains no application code — only agent definitions, slash commands, skills, schemas, rules, helper scripts, and an opencode plugin for Slack.
 
