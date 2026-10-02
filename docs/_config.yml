@@ -2,10 +2,10 @@ title: Agentic Workflow
 description: A multi-agent development harness for opencode — four coordinated agents, slash commands, skills, schemas, rules, and a Slack bridge
 markdown: GFM
 
-# Google Analytics 4 is deliberately disabled: `ga_id` is left unset, so the
-# layout emits no GA loader, consent default, or consent banner. To enable
-# analytics later, add a `ga_id: G-XXXXXXXXXX` line here (gtag.js + consent
-# mode are already wired into _layouts/default.html).
+# Google Analytics 4 with Consent Mode v2 and an EU cookie-consent banner.
+# Setting `ga_id` enables the GA loader and consent banner wired into
+# _layouts/default.html. Consent defaults to denied until the visitor accepts.
+ga_id: G-1KZ5D306QK
 
 # GitHub Pages project site — makes absolute/relative URLs resolve correctly.
 url: https://devrkd.github.io
