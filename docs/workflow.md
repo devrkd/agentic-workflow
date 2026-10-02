@@ -31,7 +31,7 @@ The four slash commands that drive this flow are covered in [Commands](commands.
 These are never bypassed:
 
 1. **Repo intel before ADR.** `architect-github-repo-intel` must complete before any ADR authoring — the language, framework, build tool, test framework, and layout must be confirmed from the actual repo, never guessed.
-2. **Human `APPROVED` before Developer.** Per [rules/approval-gate.md](https://github.com/devrkd/agentic-workflow/blob/main/rules/approval-gate.md), work halts after the ADR is published until the human explicitly approves (an `APPROVED` reply in the session; the rule's Slite-status alternative is not available under opencode since Slite is not wired). Architect must never write a handoff before approval; Orchestrator must never invoke Developer before `adr_approved_at` is present.
+2. **Human `APPROVED` before Developer.** Per [rules/approval-gate.md](https://github.com/devrkd/mentat/blob/main/rules/approval-gate.md), work halts after the ADR is published until the human explicitly approves (an `APPROVED` reply in the session; the rule's Slite-status alternative is not available under opencode since Slite is not wired). Architect must never write a handoff before approval; Orchestrator must never invoke Developer before `adr_approved_at` is present.
 3. **Developer halts without a handoff.** Developer halts if `.tmp/<task-id>/handoff.json` is missing or `adr_url` is absent: "Developer halted: `adr_url` is missing from handoff. ADR must be created and approved before implementation."
 
 ## Branch naming

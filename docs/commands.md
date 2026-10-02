@@ -5,7 +5,7 @@ description: The four slash commands — /orchestrator, /architect, /developer, 
 
 # Commands
 
-Slash commands are defined in [`.opencode/command/`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/command/). Each file binds a command to an agent via frontmatter and injects the arguments.
+Slash commands are defined in [`.opencode/command/`](https://github.com/devrkd/mentat/blob/main/.opencode/command/). Each file binds a command to an agent via frontmatter and injects the arguments.
 
 | Command | Agent | Usage |
 |---|---|---|
