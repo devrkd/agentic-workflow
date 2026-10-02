@@ -13,7 +13,7 @@ Handoffs between agents are **file-based**, kept under `.tmp/<task-id>/`:
 
 ## `handoff.json` — Architect → Developer contract
 
-Written by the Architect **only after human ADR approval**, and only when a real (or user-confirmed) task ID is present and implementation is planned. Schema: [schemas/handoff.v1.json](https://github.com/devrkd/agentic-workflow/blob/main/schemas/handoff.v1.json) (non-secret example: [schemas/handoff.v1.example.json](https://github.com/devrkd/agentic-workflow/blob/main/schemas/handoff.v1.example.json)). The Developer reads this file — not chat copy-paste — as the source of truth for what to implement.
+Written by the Architect **only after human ADR approval**, and only when a real (or user-confirmed) task ID is present and implementation is planned. Schema: [schemas/handoff.v1.json](https://github.com/devrkd/mentat/blob/main/schemas/handoff.v1.json) (non-secret example: [schemas/handoff.v1.example.json](https://github.com/devrkd/mentat/blob/main/schemas/handoff.v1.example.json)). The Developer reads this file — not chat copy-paste — as the source of truth for what to implement.
 
 | Field | Required | Purpose |
 |---|---|---|
@@ -50,14 +50,14 @@ Example (abridged):
 
 ## `state.json` — Orchestrator-maintained task state
 
-Schema: [schemas/state.v1.json](https://github.com/devrkd/agentic-workflow/blob/main/schemas/state.v1.json). Tracks overall task status and per-FR progress:
+Schema: [schemas/state.v1.json](https://github.com/devrkd/mentat/blob/main/schemas/state.v1.json). Tracks overall task status and per-FR progress:
 
 - Top level: `task_id`, `status` (`pending` / `in_progress` / `completed` / `blocked`), optional `adr_approved_at`.
 - `sub_tasks[]`: `fr`, `status` (`pending` / `in_progress` / `changes_requested` / `completed` / `blocked`), optional `branch`, `pr_url`, `review_verdict`, `reviewed_at`, `figma_conflict_resolution` (`figma` / `adr`), `blockers[]`.
 
 ## `.tmp/` lifecycle
 
-[rules/cleanup.md](https://github.com/devrkd/agentic-workflow/blob/main/rules/cleanup.md) is the single source of truth for who removes what and when:
+[rules/cleanup.md](https://github.com/devrkd/mentat/blob/main/rules/cleanup.md) is the single source of truth for who removes what and when:
 
 ```
 .tmp/<task-id>/

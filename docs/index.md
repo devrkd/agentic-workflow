@@ -1,9 +1,11 @@
 ---
-title: Agentic Workflow
+title: Mentat
 description: A multi-agent development harness for opencode — four coordinated agents, slash commands, skills, schemas, rules, and a Slack bridge
 ---
 
-# Agentic Workflow
+# Mentat
+
+*Mentat* is named for the human computers of Frank Herbert's *Dune* — people trained as disciplined reasoning engines — a fitting name for a harness whose coordinated agents work through hard problems under explicit human approval gates.
 
 This repository is a **harness for a multi-agent software-development workflow** run under [opencode](https://opencode.ai/). It contains no application code — only agent definitions, slash commands, skills, schemas, rules, helper scripts, and an opencode plugin for Slack.
 

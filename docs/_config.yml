@@ -1,4 +1,4 @@
-title: Agentic Workflow
+title: Mentat
 description: A multi-agent development harness for opencode — four coordinated agents, slash commands, skills, schemas, rules, and a Slack bridge
 markdown: GFM
 
@@ -9,7 +9,7 @@ ga_id: G-1KZ5D306QK
 
 # GitHub Pages project site — makes absolute/relative URLs resolve correctly.
 url: https://devrkd.github.io
-baseurl: /agentic-workflow
+baseurl: /mentat
 
 # Every Markdown page renders through the custom layout in _layouts/default.html.
 defaults:

@@ -11,14 +11,14 @@ The plugin auto-loads when opencode starts. If the Slack config is incomplete it
 
 | File | Purpose |
 |---|---|
-| [`.opencode/plugins/slack-bridge.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/plugins/slack-bridge.ts) | Plugin entry point. Registers `event` (all events), `tool.execute.after`, and `dispose` hooks and delegates to the bridge. |
-| [`.opencode/lib/slack/config.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/lib/slack/config.ts) | Reads the project `.env`, validates the Slack variables, honours `SLACK_BRIDGE=off`. |
-| [`.opencode/lib/slack/bridge.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/lib/slack/bridge.ts) | Core logic: event handling, lazy child-thread creation, Slack client wiring (Web API + Socket Mode), button actions, reply injection, stale-click and orphan-card handling. |
-| [`.opencode/lib/slack/format.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/lib/slack/format.ts) | Block Kit formatting, mrkdwn escaping/truncation, and normalisation of permission/question events. |
-| [`.opencode/lib/slack/session-map.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/lib/slack/session-map.ts) | Persists the `sessionID → Slack thread` mapping. |
-| [`.opencode/lib/slack/throttle.ts`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/lib/slack/throttle.ts) | `LineBatch` — coalesces bursts of tool-run lines into a single Slack message per session. |
-| [`.opencode/package.json`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/package.json) | Plugin deps: `@slack/web-api`, `@slack/socket-mode`, `@slack/types`, `@opencode-ai/plugin`, `@opencode-ai/sdk`. Installed via Bun on first launch. |
-| [`.env.example`](https://github.com/devrkd/agentic-workflow/blob/main/.env.example) | Documents the `SLACK_*` variables. |
+| [`.opencode/plugins/slack-bridge.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/plugins/slack-bridge.ts) | Plugin entry point. Registers `event` (all events), `tool.execute.after`, and `dispose` hooks and delegates to the bridge. |
+| [`.opencode/lib/slack/config.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/lib/slack/config.ts) | Reads the project `.env`, validates the Slack variables, honours `SLACK_BRIDGE=off`. |
+| [`.opencode/lib/slack/bridge.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/lib/slack/bridge.ts) | Core logic: event handling, lazy child-thread creation, Slack client wiring (Web API + Socket Mode), button actions, reply injection, stale-click and orphan-card handling. |
+| [`.opencode/lib/slack/format.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/lib/slack/format.ts) | Block Kit formatting, mrkdwn escaping/truncation, and normalisation of permission/question events. |
+| [`.opencode/lib/slack/session-map.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/lib/slack/session-map.ts) | Persists the `sessionID → Slack thread` mapping. |
+| [`.opencode/lib/slack/throttle.ts`](https://github.com/devrkd/mentat/blob/main/.opencode/lib/slack/throttle.ts) | `LineBatch` — coalesces bursts of tool-run lines into a single Slack message per session. |
+| [`.opencode/package.json`](https://github.com/devrkd/mentat/blob/main/.opencode/package.json) | Plugin deps: `@slack/web-api`, `@slack/socket-mode`, `@slack/types`, `@opencode-ai/plugin`, `@opencode-ai/sdk`. Installed via Bun on first launch. |
+| [`.env.example`](https://github.com/devrkd/mentat/blob/main/.env.example) | Documents the `SLACK_*` variables. |
 | `.opencode/slack-bridge-state.json` | Runtime state file (session→thread map), written under `.opencode/` and not committed; a corrupt file is discarded and the bridge starts clean. |
 
 Logging goes to opencode's app log under the service name **`slack-bridge`** (levels debug/info/warn/error).
@@ -121,7 +121,7 @@ Set `SLACK_BRIDGE=off` to disable without removing tokens. Leave `SLACK_ALLOWED_
 The bridge runs **inside the opencode server**, so anything Slack injects shows up the same way your own typing does.
 
 - **Normal TUI** — run `opencode`. A Slack reply injected into a session streams live in that session's view. Switch sessions to see other threads.
-- **Headless + attach** — run the server (see [`scripts/slack-server.sh`](https://github.com/devrkd/agentic-workflow/blob/main/scripts/slack-server.sh)), then attach a live TUI:
+- **Headless + attach** — run the server (see [`scripts/slack-server.sh`](https://github.com/devrkd/mentat/blob/main/scripts/slack-server.sh)), then attach a live TUI:
 
   ```bash
   scripts/slack-server.sh 4096        # opencode serve --port 4096 --print-logs

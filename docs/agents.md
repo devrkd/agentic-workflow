@@ -5,7 +5,7 @@ description: The four opencode agents — Orchestrator, Architect, Developer, St
 
 # Agents
 
-Agent definitions live in [`.opencode/agent/`](https://github.com/devrkd/agentic-workflow/blob/main/.opencode/agent/). Model mapping is set per agent (opencode has no `haiku`/`sonnet`/`opus` aliases); edit the `model:` field in each `.opencode/agent/*.md` to remap.
+Agent definitions live in [`.opencode/agent/`](https://github.com/devrkd/mentat/blob/main/.opencode/agent/). Model mapping is set per agent (opencode has no `haiku`/`sonnet`/`opus` aliases); edit the `model:` field in each `.opencode/agent/*.md` to remap.
 
 | Agent | Mode | Model | Variant | Role |
 |---|---|---|---|---|
