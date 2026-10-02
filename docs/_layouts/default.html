@@ -15,6 +15,12 @@
     <meta name="generator" content="Jekyll">
     <link rel="stylesheet" href="{{ "/assets/css/style.css" | relative_url }}">
 
+    <!-- Site icon: a small 64px favicon (generated from the project icon) for
+         browser tabs, plus the full-size icon as an Apple touch icon. Both go
+         through Jekyll's relative_url filter so they respect baseurl: /mentat. -->
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ "/assets/favicon-64.png" | relative_url }}">
+    <link rel="apple-touch-icon" href="{{ "/assets/mentat-icon.png" | relative_url }}">
+
     {% if site.ga_id %}
     <!-- Google Analytics 4 (gtag.js) with Consent Mode v2. The consent-default
          script must run before anything else so no GA cookies are set until
