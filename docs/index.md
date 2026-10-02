@@ -5,10 +5,6 @@ description: A multi-agent development harness for opencode — four coordinated
 
 # Mentat
 
-<p style="text-align:center; margin: 0 0 18px">
-  <img src="{{ '/assets/mentat-icon.png' | relative_url }}" alt="Mentat" width="160">
-</p>
-
 *Mentat* is named for the human computers of Frank Herbert's *Dune* — people trained as disciplined reasoning engines — a fitting name for a harness whose coordinated agents work through hard problems under explicit human approval gates.
 
 This repository is a **harness for a multi-agent software-development workflow** run under [opencode](https://opencode.ai/). It contains no application code — only agent definitions, slash commands, skills, schemas, rules, helper scripts, and an opencode plugin for Slack.
