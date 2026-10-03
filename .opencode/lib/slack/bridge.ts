@@ -8,6 +8,7 @@ import { SessionMap, type SessionRef } from "./session-map.ts"
 import {
   childSessionRootText,
   childThreadPointerText,
+  escapeMrkdwn,
   normalizePermission,
   normalizeQuestion,
   permissionBlocks,
@@ -15,11 +16,15 @@ import {
   questionBlocks,
   questionText,
   recentContextLines,
+  redactHostInfo,
   resolvedBlocks,
   sessionRootText,
+  sessionStatusText,
+  truncate,
   type PermissionAction,
   type PermissionInfo,
   type QuestionRequestInfo,
+  type StatusActivity,
 } from "./format.ts"
 
 type OpenCodeClient = PluginInput["client"]
@@ -31,6 +36,22 @@ export type Bridge = {
 
 const SERVICE = "slack-bridge"
 const ACTION_PREFIX = "slackbridge"
+
+/** Built-in Slack emoji used as the in-progress loader on a session's root message. */
+const LOADER_EMOJI = "hourglass_flowing_sand"
+
+type SlashCommandBody = {
+  command?: string
+  text?: string
+  channel_id?: string
+  user_id?: string
+  team_id?: string
+  trigger_id?: string
+  response_url?: string
+  user_name?: string
+  channel_name?: string
+  api_app_id?: string
+}
 
 type PendingPermission = {
   channel: string
@@ -75,6 +96,8 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
   const threadLocks = new Map<string, Promise<SessionRef | null>>()
   const pendingPermissions = new Map<string, PendingPermission>()
   const pendingQuestions = new Map<string, PendingQuestion>()
+  /** sessionID -> whether the loader emoji is currently on its root message (in-memory only). */
+  const loaderReactions = new Map<string, boolean>()
   const serverUrl = input.serverUrl
 
   if (config.allowedUsers.length === 0) {
@@ -129,6 +152,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
           ...(info.parentID ? { parentID: info.parentID } : {}),
         }
         sessions.set(sessionID, ref)
+        await setLoader(sessionID, ref, true)
         await log("info", "created Slack thread", {
           sessionID,
           ts: ref.ts,
@@ -157,6 +181,59 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         text,
         mrkdwn: true,
       })
+    } catch {
+      // best-effort
+    }
+  }
+
+  /**
+   * True when a reactions.add/remove error simply means the desired state
+   * already holds (e.g. Slack's `already_reacted` / `no_reaction`) or the
+   * message is gone — nothing more to do.
+   */
+  function isReactionNoop(error: unknown, codes: string[]): boolean {
+    const dataError = (error as { data?: { error?: string } }).data?.error
+    const message = describeError(error)
+    return codes.some((code) => dataError === code || message.includes(code))
+  }
+
+  /**
+   * Idempotently adds/removes the loader emoji on a session's root message.
+   * State is tracked in memory (no Slack call is repeated for the same state),
+   * and Slack's `already_reacted` / `no_reaction` / `message_not_found`
+   * errors are tolerated as success. Best-effort: failures leave the tracked
+   * state untouched so the next activity signal retries.
+   */
+  async function setLoader(sessionID: string, ref: SessionRef, on: boolean): Promise<void> {
+    if (!ref.ts) return
+    const current = loaderReactions.get(sessionID) ?? false
+    if (current === on) return
+    try {
+      if (on) {
+        await web.reactions.add({ channel: ref.channel, timestamp: ref.ts, name: LOADER_EMOJI })
+      } else {
+        await web.reactions.remove({ channel: ref.channel, timestamp: ref.ts, name: LOADER_EMOJI })
+      }
+      loaderReactions.set(sessionID, on)
+    } catch (error) {
+      if (isReactionNoop(error, ["already_reacted", "no_reaction", "message_not_found"])) {
+        loaderReactions.set(sessionID, on)
+      }
+      // otherwise: best-effort, keep the previous state
+    }
+  }
+
+  /** Mark a session as busy: shows the loader on its root message if the thread exists. */
+  async function markActive(sessionID: string): Promise<void> {
+    const ref = sessions.get(sessionID)
+    if (!ref) return
+    await setLoader(sessionID, ref, true)
+  }
+
+  /** Best-effort ephemeral reply visible only to the invoking Slack user. */
+  async function replyEphemeral(channel: string, user: string, text: string): Promise<void> {
+    try {
+      await web.chat.postEphemeral({ channel, user, text })
     } catch {
       // best-effort
     }
@@ -206,6 +283,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     const hadThread = sessions.has(permission.sessionID)
     const ref = await ensureThread(permission.sessionID)
     if (!ref) return
+    await markActive(permission.sessionID)
     if (!hadThread && ref.parentID) {
       const parent = sessions.get(ref.parentID)
       if (parent) {
@@ -322,6 +400,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     const ok = await replyQuestion(requestID, answers)
     if (!ok) return
     pendingQuestions.delete(requestID)
+    await markActive(pending.sessionID)
     await log("info", "question answered from Slack", { requestID })
     try {
       await web.chat.update({
@@ -367,6 +446,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     const hadThread = sessions.has(info.sessionID)
     const ref = await ensureThread(info.sessionID)
     if (!ref) return
+    await markActive(info.sessionID)
     if (!hadThread && ref.parentID) {
       const parent = sessions.get(ref.parentID)
       if (parent) {
@@ -507,7 +587,13 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       }
       case "session.idle": {
         // Routine progress is intentionally not mirrored to Slack; the only
-        // proactive posts are approval and question cards.
+        // proactive posts are approval and question cards. The session is
+        // done, so drop the loader reaction.
+        const { sessionID } = event.properties as { sessionID?: string }
+        if (sessionID) {
+          const ref = sessions.get(sessionID)
+          if (ref) await setLoader(sessionID, ref, false)
+        }
         return
       }
       case "session.error": {
@@ -561,8 +647,11 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         const info = event.properties as { info?: { id?: string } }
         const sessionID = info.info?.id
         if (!sessionID) return
+        const ref = sessions.get(sessionID)
         childSessions.delete(sessionID)
         sessions.delete(sessionID)
+        if (ref) await setLoader(sessionID, ref, false)
+        loaderReactions.delete(sessionID)
         await resolvePendingForSession(sessionID, "Session ended — pending request discarded.")
         return
       }
@@ -819,10 +908,95 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         path: { id: sessionID },
         body: { parts: [{ type: "text", text }] },
       })
+      await markActive(sessionID)
       await log("info", "injected Slack reply", { sessionID })
     } catch (error) {
       await log("error", "failed to inject Slack reply", { error: String(error) })
     }
+  }
+
+  /**
+   * Handles the `/status` slash command (Socket Mode `slash_commands` event).
+   * Replies ephemerally with the target session's title, pending
+   * approval/question state, and its last few activity lines — redacted and
+   * truncated by the shared helpers, so no host detail leaks.
+   */
+  async function onSlashCommand(body: SlashCommandBody): Promise<void> {
+    const userID = body.user_id
+    const channelID = body.channel_id
+    if (!userID || !channelID) return
+
+    if (!authorized(userID)) {
+      await log("warn", "ignored /status from unauthorized user", { user: userID })
+      await replyEphemeral(channelID, userID, "You are not allowed to use `/status`.")
+      return
+    }
+
+    const query = (body.text ?? "").trim()
+    const lowerQuery = query.toLowerCase()
+
+    // Resolve the target session: an explicit query matches a session ID or
+    // title substring; otherwise fall back to the most recent session whose
+    // thread lives in the channel the command was invoked from.
+    let targetID: string | undefined
+    let ref: SessionRef | undefined
+    if (lowerQuery) {
+      let latest: [string, SessionRef] | null = null
+      for (const [id, candidate] of sessions.entries()) {
+        if (id.toLowerCase() !== lowerQuery && !candidate.title.toLowerCase().includes(lowerQuery)) continue
+        if (!latest || candidate.createdAt > latest[1].createdAt) latest = [id, candidate]
+      }
+      if (latest) [targetID, ref] = latest
+    } else {
+      let latest: [string, SessionRef] | null = null
+      for (const [id, candidate] of sessions.entries()) {
+        if (candidate.channel !== channelID) continue
+        if (!latest || candidate.createdAt > latest[1].createdAt) latest = [id, candidate]
+      }
+      if (latest) [targetID, ref] = latest
+    }
+
+    if (!targetID || !ref) {
+      const hint = query
+        ? `No session matching \`${escapeMrkdwn(truncate(redactHostInfo(query), 60))}\` found.`
+        : "No sessions in this channel yet."
+      await replyEphemeral(channelID, userID, hint)
+      return
+    }
+
+    const pendingApproval = [...pendingPermissions.values()].some(
+      (pending) => pending.sessionID === targetID,
+    )
+    const pendingQuestion = [...pendingQuestions.values()].some(
+      (pending) => pending.sessionID === targetID,
+    )
+
+    // Last few messages with text, newest last — the same tail the cards use.
+    const activity: StatusActivity[] = []
+    try {
+      const res = await client.session.messages({ path: { id: targetID } })
+      const messages = res.data ?? []
+      const recent: StatusActivity[] = []
+      for (let i = messages.length - 1; i >= 0 && recent.length < 3; i--) {
+        const message = messages[i]
+        const text = message.parts
+          .filter((part) => part.type === "text")
+          .map((part) => (part as { text: string }).text)
+          .join("\n")
+          .trim()
+        if (text) recent.unshift({ role: message.info.role, text })
+      }
+      activity.push(...recent)
+    } catch {
+      // best-effort: the reply below still carries title and pending state
+    }
+
+    await replyEphemeral(
+      channelID,
+      userID,
+      sessionStatusText(ref.title, { approval: pendingApproval, question: pendingQuestion }, activity),
+    )
+    await log("info", "/status served", { sessionID: targetID, user: userID })
   }
 
   socket.on("slack_event", async (args: { ack?: () => Promise<void>; body: unknown }) => {
@@ -838,6 +1012,9 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         await onAction(body as Parameters<typeof onAction>[0])
       } else if (body.type === "event_callback") {
         await onSlackMessage(body as Parameters<typeof onSlackMessage>[0])
+      } else if (body.type === "slash_commands") {
+        const slash = body as SlashCommandBody
+        if (slash.command === "/status") await onSlashCommand(slash)
       }
     } catch (error) {
       await log("error", "slack event handler failed", { error: String(error) })
