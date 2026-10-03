@@ -10,6 +10,30 @@
       "headers": {
         "Authorization": "Bearer {env:GITHUB_TOKEN}"
       }
+    },
+    "task": {
+      "enabled": false,
+      "type": "remote",
+      "url": "https://your-task-provider.example/mcp/",
+      "headers": {
+        "Authorization": "Bearer {env:TASK_PROVIDER_TOKEN}"
+      }
+    },
+    "documentation": {
+      "enabled": false,
+      "type": "remote",
+      "url": "https://your-documentation-provider.example/mcp/",
+      "headers": {
+        "Authorization": "Bearer {env:DOCUMENTATION_PROVIDER_TOKEN}"
+      }
+    },
+    "ux": {
+      "enabled": false,
+      "type": "local",
+      "command": ["npx", "-y", "<your-ux-provider-mcp>", "--stdio"],
+      "environment": {
+        "UX_PROVIDER_TOKEN": "{env:UX_PROVIDER_TOKEN}"
+      }
     }
   },
   "permission": {
