@@ -104,18 +104,21 @@ After ADR approval, Architect writes `.tmp/<task-id>/handoff.json` (schema: [`sc
 
 An opencode plugin bridges opencode sessions to Slack and lets you answer approvals from Slack instead of the terminal. Useful for long `/architect` or `/developer` runs you want to monitor away from the keyboard.
 
-- **Out** — one thread per session in the configured channel, used only for approval/question cards with a compact, redacted context summary. Routine progress (tool runs, plan, completion summary, errors) is not posted, and host-specific detail (absolute paths, hostnames, usernames) is redacted from everything posted.
+- **Out** — one thread per session in the configured channel, used only for approval/question cards with a compact, redacted context summary. Routine progress (tool runs, plan, completion summary, errors) is not posted, and host-specific detail (absolute paths, hostnames, usernames) is redacted from everything posted. A loader reaction (`:hourglass_flowing_sand:`) on the session's root message shows work in progress: it is added when the session starts or new activity arrives (a card is posted, a Slack reply is injected) and removed when the session goes idle or is deleted.
 - **In** — permission/approval prompts post as interactive messages with **Approve once / Always / Reject** buttons. The agent's `question` tool posts option buttons too. Replying in the thread injects a prompt into the running session; `!abort` stops it.
+- **Status** — `/status [text]` in any channel replies (ephemerally, only to you) with the session's title, pending approval/question state, and its last few activity lines, all redacted. `/status` alone picks the most recent session in that channel; with `text` it matches a session title or ID.
 
 ### Setup
 
 1. Create a Slack app and enable **Socket Mode** (no public URL needed).
-2. Bot scopes: `chat:write`, `channels:read`, plus `channels:history` (public) or `groups:history` (private), `users:read`, `reactions:write`.
+2. Bot scopes: `chat:write`, `channels:read`, plus `channels:history` (public) or `groups:history` (private), `users:read`, `reactions:write`, `commands`.
 3. Generate an **App-Level Token** with `connections:write`, and **Install** to get the Bot token.
 4. Turn **Interactivity** on (for the approval buttons), and under **Event Subscriptions** subscribe to `message.channels` (public) or `message.groups` (private) so thread replies reach the agent.
-5. `/invite` the app to the target channel and copy its channel ID.
-6. Fill `.env`: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_CHANNEL`, and `SLACK_ALLOWED_USERS` (your Slack member ID — recommended, or anyone in the channel can approve commands).
-7. Start `opencode`; the plugin loads automatically and installs its deps via Bun on first run.
+5. Register the slash command: **Features → Slash Commands → Create New Command** with command `/status`. Leave the Request URL blank — Socket Mode delivers invocations over the existing socket, and the current event subscriptions are unchanged.
+6. **Reinstall** the app to the workspace so the new `commands` scope and slash command apply.
+7. `/invite` the app to the target channel and copy its channel ID.
+8. Fill `.env`: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_CHANNEL`, and `SLACK_ALLOWED_USERS` (your Slack member ID — recommended, or anyone in the channel can approve commands).
+9. Start `opencode`; the plugin loads automatically and installs its deps via Bun on first run.
 
 Set `SLACK_BRIDGE=off` to disable without removing tokens. If config is incomplete the plugin logs once and stays inert, so opencode always starts.
 
@@ -132,7 +135,7 @@ The bridge runs inside the opencode server, so anything Slack injects shows up t
   opencode attach http://127.0.0.1:4096
   ```
   `opencode web` is the same view in a browser.
-- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `approval card posted`, `session error (not posted to Slack)`) alongside opencode's loop/tool logs.
+- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `approval card posted`, `/status served`, `session error (not posted to Slack)`) alongside opencode's loop/tool logs.
 
 > The plugin reads `.env` itself, so `SLACK_*` values do not need to be exported. `GITHUB_TOKEN` is still read from the environment by `opencode.json`.
 
