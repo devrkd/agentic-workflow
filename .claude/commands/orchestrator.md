@@ -23,7 +23,7 @@ Read `$ARGUMENTS` carefully. Route to **exactly one** agent using the decision t
 
 | # | Route to | When ALL of these are true |
 |---|---|---|
-| 1 | **Developer** (Sonnet) | Implementation is the primary intent AND a ClickUp task ID or URL is present. `handoff.json` is **not** required — Developer reads the ClickUp task directly. |
+| 1 | **Developer** (Sonnet) | Implementation is the primary intent AND a task ID or URL is present. `handoff.json` is **not** required — Developer reads the task directly. |
 | 2 | **Architect** (Sonnet) | Design, analysis, review, or doc work — with no immediate implementation request. This is the **default** for any non-implementation request. |
 | 3 | **Staff** (Opus 4.8) | Only when explicitly requested, or when multi-source analysis is clearly needed (see Staff signals below). **Always confirm before routing to Staff.** |
 
@@ -32,33 +32,33 @@ Read `$ARGUMENTS` carefully. Route to **exactly one** agent using the decision t
 ### Developer signals (highest priority when task ID present)
 
 Route to Developer when:
-- A ClickUp task ID or URL is present **and** the intent is to code/implement/fix/build
+- A task ID or URL is present **and** the intent is to code/implement/fix/build
 - "implement", "build", "code", "fix", "develop", "ship", "execute", "do the task", "run the subtasks"
 - "write the code", "open a PR", "create a branch"
 
-**Developer reads the ClickUp task directly** — it does not need a pre-built `handoff.json`. If Developer encounters ambiguity or missing design context, it escalates to Architect mid-flow (see Developer route below).
+**Developer reads the task directly** — it does not need a pre-built `handoff.json`. If Developer encounters ambiguity or missing design context, it escalates to Architect mid-flow (see Developer route below).
 
 ### Architect signals (default for analysis and design)
 
 Route to Architect for **all** of the following unless a Staff trigger overrides:
 
 - "design", "plan", "ADR", "tech spec", "architecture", "how should we", "propose"
-- Any Slite URL paired with a request to **update** or **write** to that doc
+- Any documentation page URL paired with a request to **update** or **write** to that doc
 - "review PR" when the intent is to author a review comment or ADR update
 - A GitHub repo URL with intent to produce a design doc or ADR
-- **No ClickUp task ID present** but design output is needed
+- **No task ID present** but design output is needed
 - General analysis, audit, or review of a **single source** (one doc, one PR, one repo, one sprint)
 - "check", "audit", "analyse / analyze", "review", "tell me if", "what is", "how does", "find gaps", "what's missing", "risk assessment"
-- ClickUp task/sprint triage ("what's blocked", "what's in progress", "summarise the sprint")
+- Task/sprint triage ("what's blocked", "what's in progress", "summarise the sprint")
 - GitHub PR or commit analysis with no intent to comment or merge
-- Figma design review with no intent to edit
+- UX/design review with no intent to edit
 
 ### Staff signals (only two triggers — both require confirmation)
 
 **Trigger Staff only when one of these is true:**
 
 1. **Explicit request** — the user uses the word "staff" or explicitly asks for a deep cross-system investigation ("staff analysis", "use staff", "deep staff dive", "run staff")
-2. **Multi-source analysis** — the request clearly involves reading and cross-referencing **two or more distinct MCP sources simultaneously** (e.g. two or more Slite doc URLs, combining ClickUp + Slite + GitHub in one analysis, comparing Figma frames against a spec doc)
+2. **Multi-source analysis** — the request clearly involves reading and cross-referencing **two or more distinct MCP sources simultaneously** (e.g. two or more documentation page URLs, combining task board + documentation + GitHub in one analysis, comparing design frames against a spec doc)
 
 **In both cases, before routing to Staff:**
 1. Confirm with the user: "This looks like it needs Staff (multi-source analysis with Opus). Shall I proceed? This uses more resources."
@@ -79,7 +79,7 @@ Do **not** route to Staff for:
 **Pre-condition:** User must have confirmed (see Step 1 Staff signals). Do not spawn without confirmation.
 
 Spawn Agent(`subagent_type: "claude"`, `model: "opus"`) with a prompt that tells it to:
-- Act as a **read-only analyst** — never write to or mutate any MCP (ClickUp, Slite, GitHub, Figma)
+- Act as a **read-only analyst** — never write to or mutate any MCP (task, documentation, GitHub, ux)
 - Use all available MCP servers in read mode only
 - Analyse `$ARGUMENTS` thoroughly: cross-reference sources, identify gaps, flag inconsistencies, assess risks
 - **Always write findings to a handoff document** at `.tmp/<task-id>/analysis-handoff.json` (use `analysis` as task-id if no real task ID present) with this structure:
@@ -106,11 +106,11 @@ After the subagent completes, go to **Step 3**.
 Spawn Agent(`subagent_type: "claude"`, `model: "sonnet"`) with a prompt that tells it to:
 - Read and follow `.claude/prompts/architect.md` and all skills in `.claude/skills/`
 - **Task ID is optional** — extract from input if present; if not, proceed without it
-- Pass through all refs from `$ARGUMENTS` (ClickUp URL, Slite URL, repo URL, `skip_clickup`)
-- **MCP servers:** use available MCP connectors. Cloud connectors (`mcp__claude_ai_ClickUp__*`, `mcp__claude_ai_Slite_MCP__*`, `mcp__claude_ai_Figma__*`) are the primary path when available. Project `.mcp.json` servers (`slite`, `github`) serve as fallbacks or supplements.
-- Produce design/plan output: ADR in Slite, doc updates, repo analysis, tech decisions
+- Pass through all refs from `$ARGUMENTS` (task URL, documentation URL, repo URL, `skip_task_tracking`)
+- **MCP servers:** use available MCP connectors. The `task`, `documentation`, and `ux` source categories are bound to concrete providers in `.mcp.json` (`mcpServers.task` / `mcpServers.documentation` / `mcpServers.ux`) and are the primary path when available. GitHub (`.mcp.json` remote) is unchanged. Discover at runtime which category servers are connected before relying on one.
+- Produce design/plan output: ADR in the documentation source, doc updates, repo analysis, tech decisions
 - If task ID is present and design requires implementation: write `.tmp/<task-id>/handoff.json` with sub-tasks for Developer
-- Return outcome (Slite URL, design docs, blockers)
+- Return outcome (ADR URL, design docs, blockers)
 
 After the subagent completes, go to **Step 3**.
 
@@ -118,14 +118,14 @@ After the subagent completes, go to **Step 3**.
 
 ### Route: Developer (model: sonnet)
 
-**Hard requirement:** ClickUp task ID must be present in input. Halt immediately if missing and tell the user to provide it.
+**Hard requirement:** task ID must be present in input. Halt immediately if missing and tell the user to provide it.
 
 Spawn Agent(`subagent_type: "claude"`, `model: "sonnet"`) with a prompt that tells it to:
 - Read and follow `.claude/prompts/developer.md` and all skills in `.claude/skills/`
-- **Read the ClickUp task directly** using the ClickUp MCP server — no handoff.json required to start
-- Extract subtasks from the ClickUp task; if a `$ARGUMENTS` scope is given (e.g. "TODO only"), filter accordingly
-- If `.tmp/<task-id>/handoff.json` exists, prefer it for richer context (ADR URL, FR scope, Figma frames)
-- Implement each subtask sequentially; for each one: create branch, implement, open PR, update ClickUp status
+- **Read the task directly** using the task MCP — no handoff.json required to start
+- Extract subtasks from the task; if a `$ARGUMENTS` scope is given (e.g. "TODO only"), filter accordingly
+- If `.tmp/<task-id>/handoff.json` exists, prefer it for richer context (ADR URL, FR scope, design frames)
+- Implement each subtask sequentially; for each one: create branch, implement, open PR, update task status
 - **If design context is missing or ambiguous:** pause and request Orchestrator to spawn Architect for that specific question — do not guess architecture decisions
 - Return: list of PRs opened, subtasks completed, and any blockers
 
@@ -190,7 +190,7 @@ If the subagent returned a blocker, escalate it clearly with options. Never sile
 - Never bypass the ADR approval gate
 - Staff never mutates external systems — enforce this in the prompt you send it
 - State tracking: maintain `.tmp/<task-id>/state.json` (sub-task status: `pending` / `in_progress` / `completed` / `blocked`)
-- ClickUp/Slite content disclaimer: pass through to every subagent per `.claude/prompts/orchestrator.md` external content policy
+- Task/documentation content disclaimer: pass through to every subagent per `.claude/prompts/orchestrator.md` external content policy
 - Worktree policy: enforce per `.claude/prompts/orchestrator.md`
 
 ---

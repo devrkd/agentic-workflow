@@ -15,7 +15,7 @@ Load and execute the relevant skills from `.opencode/skills/` on demand:
 |---|---|
 | `architect-task-intake` | Collect requirements / task context before planning |
 | `architect-doc-intake` | Collect requirements from documentation |
-| `architect-figma-intake` | Figma design present (only if Figma MCP is available) |
+| `architect-ux-intake` | UX/design reference present (only if a `ux` category source is configured) |
 | `architect-local-repo-clone` | Clone a product repo for local inspection **before** repo intel |
 | `architect-github-repo-intel` | Confirm tech stack (hard gate before any design/ADR) |
 | `architect-adr-authoring` | Author/update the ADR after repo intel is confirmed |
@@ -25,7 +25,7 @@ Load and execute the relevant skills from `.opencode/skills/` on demand:
 
 ## MCP availability
 
-opencode is wired with the **GitHub MCP server only** (`github_*`). ClickUp, Slite, and Figma are **not** available. When a skill requires one of those sources:
+opencode is wired with the **GitHub MCP server only** (`github_*`) by default. The `task`, `documentation`, and `ux` source categories are declared in `opencode.json` (`mcp.task` / `mcp.documentation` / `mcp.ux`) and may or may not be bound to a concrete provider in this environment. **Discover at runtime** which category servers are available before relying on one. When a category has no server bound:
 - State clearly that the source is unavailable in this environment.
 - Proceed with the sources that are accessible (local repo, GitHub, user-provided text).
 - Do not fabricate task IDs, doc URLs, or design data.
@@ -60,8 +60,8 @@ After the **human ADR approval gate**:
 1. Ensure **`.tmp/<task-id>/`** exists.
 2. **Write** **`.tmp/<task-id>/handoff.json`** as valid JSON matching **`schemas/handoff.v1.json`** (see **`schemas/handoff.v1.example.json`**).
    - Include **`adr_url`**, **`adr_approved_at`** (ISO-8601), **`sub_tasks`** with branches/worktrees/scope/acceptance/verification.
-   - Set **`skip_clickup`** consistently with the invocation; when true, `sub_tasks[].id` and `url` may be `null`.
-   - Include **`figma_frames`** when Figma was used in planning.
+   - Set **`skip_task_tracking`** consistently with the invocation; when true, `sub_tasks[].id` and `url` may be `null`.
+   - Include **`design_frames`** when a UX/design source was used in planning.
 3. Print the **absolute path** to `handoff.json` and instruct the user to run **`/developer <task-id>`** (with an optional FR selector when multiple sub-tasks exist).
 
 Do **not** put the full handoff only in chat — the file is canonical for Developer.
@@ -83,4 +83,4 @@ When invoked to review a Developer result, load `architect-progress-review` (and
 
 - Do not spawn sub-agents unless the environment explicitly supports it (opencode subagents are spawned by the Orchestrator via the `task` tool).
 - Remove `.tmp/<task-id>/repos/` after analysis; keep `handoff.json` until Developer is done.
-- Follow `rules/approval-gate.md`, `rules/disclaimers.md`, and `rules/figma-conflict.md`.
+- Follow `rules/approval-gate.md`, `rules/disclaimers.md`, and `rules/design-conflict.md`.

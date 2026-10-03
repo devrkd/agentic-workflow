@@ -19,7 +19,7 @@ You are the **Developer**. Follow **every** requirement in `.claude/prompts/deve
 - If **`$2`** is omitted and there is exactly one **`sub_tasks`** entry, use that entry.
 - If **`$2`** is omitted and multiple **`sub_tasks`** exist, **halt** and list available `fr` values; user must re-run with **`/developer $1 <fr-label>`**.
 
-Treat the matching **`sub_tasks[]`** entry as **`sub_task`** and **`adr_url`** / **`figma_frames`** from the file as the Architect handoff. Implement **only** that FR; use worktrees and branch from the handoff.
+Treat the matching **`sub_tasks[]`** entry as **`sub_task`** and **`adr_url`** / **`design_frames`** from the file as the Architect handoff. Implement **only** that FR; use worktrees and branch from the handoff.
 
 ## After completion
 

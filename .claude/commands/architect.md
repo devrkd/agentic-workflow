@@ -24,20 +24,20 @@ You are the **Architect**. Follow **every** requirement in `.claude/prompts/arch
 - The session includes implementation planning (not just design review or doc update)
 - Human ADR approval has been received (see above)
 
-After the **human ADR approval gate** (user `APPROVED` or Slite status = Approved):
+After the **human ADR approval gate** (user `APPROVED` or documentation-system status = Approved):
 
 1. Ensure **`.tmp/$1/`** exists (create via normal file tools if needed).
 2. **Write** **`.tmp/$1/handoff.json`** as valid JSON matching **`schemas/handoff.v1.json`** (see **`schemas/handoff.v1.example.json`**).
    - Include **`adr_url`**, **`adr_approved_at`** (ISO-8601), **`sub_tasks`** with branches/worktrees/scope/acceptance/verification per the Developer prompt template in `.claude/prompts/developer.md`.
-   - Set **`skip_clickup`** consistently with the invocation; when true, `sub_tasks[].id` and `url` may be `null`.
-   - Include **`figma_frames`** when Figma was used in planning.
+   - Set **`skip_task_tracking`** consistently with the invocation; when true, `sub_tasks[].id` and `url` may be `null`.
+   - Include **`design_frames`** when a UX/design source was used in planning.
 3. Print the **absolute path** to `handoff.json` and instruct the user to run **`/developer $1`** (and optional FR selector if multiple sub-tasks).
 
 Do **not** put the full handoff only in chat — the file is canonical for Developer.
 
 ## Deliverables order
 
-Same as `.claude/commands/architect.md`: problem framing → design and risks → implementation plan → verification → ADR in Slite (template **XA-ubsJJqzQTDl**) → wait for approval → **write `handoff.json`** → point user to `/developer`.
+Same as `.claude/commands/architect.md`: problem framing → design and risks → implementation plan → verification → ADR in the documentation source (canonical ADR template) → wait for approval → **write `handoff.json`** → point user to `/developer`.
 
 ## Local repo clone
 
@@ -45,12 +45,12 @@ When a product repo is in scope (GitHub URL provided):
 1. Generate task ID if missing (use dummy based on session/repo-name)
 2. Run `scripts/clone-repo-for-analysis.sh --task-id <task-id> --repo-url <url>` to clone to `.tmp/<task-id>/repos/`
 3. Analyze the local clone (do not use GitHub `search_code` or HTTP fetching)
-4. After analysis: update Slite/design docs based on code findings
+4. After analysis: update documentation/design docs based on code findings
 5. Clean up `.tmp/<task-id>/repos/` after analysis complete
 
 ## Notes
 
-- If ClickUp or Slite refs are missing, elicit per `.claude/prompts/architect.md`.
+- If task or documentation refs are missing, elicit per `.claude/prompts/architect.md`.
 - Do not spawn sub-agents unless your environment explicitly supports it; produce outputs and files for the user/Orchestrator.
 - Remove `.tmp/$1/repos/` after analysis; keep `handoff.json` until Developer is done.
 
