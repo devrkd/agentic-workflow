@@ -1,11 +1,11 @@
 {
   "task_id": "RTD-541",
-  "adr_url": "https://slite.com/api/notes/example-adr-id",
+  "adr_url": "https://docs.example.com/notes/example-adr-id",
   "adr_approved_at": "2026-05-08T12:00:00Z",
-  "skip_clickup": true,
-  "figma_frames": [
+  "skip_task_tracking": true,
+  "design_frames": [
     {
-      "url": "https://www.figma.com/design/abc123/File",
+      "url": "https://design.example.com/file/abc123",
       "summary": "Example frame: login form layout."
     }
   ],
