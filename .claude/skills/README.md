@@ -14,7 +14,7 @@ This repository uses a docs-managed skill system to separate role boundaries fro
 ### Architect
 - `architect.task-intake.md`
 - `architect.doc-intake.md`
-- `architect.figma-intake.md`
+- `architect.ux-intake.md`
 - `architect.local-repo-clone.md`
 - `architect.github-repo-intel.md`
 - `architect.adr-authoring.md`
@@ -25,12 +25,12 @@ This repository uses a docs-managed skill system to separate role boundaries fro
 ### Staff
 - `staff.doc-compare.md`
 - `staff.repo-audit.md`
-- `staff.clickup-triage.md`
+- `staff.task-triage.md`
 - `staff.risk-assessment.md`
 
 ### Developer
 - `developer.worktree-bootstrap.md`
-- `developer.figma-intake.md`
+- `developer.ux-intake.md`
 - `developer.implementation.md`
 - `developer.test-validation.md`
 - `developer.change-report.md`
@@ -41,7 +41,7 @@ Rules in `rules/` are referenced by skills and prompts — not repeated in them:
 
 | Rule file | What it governs |
 |---|---|
-| `rules/disclaimers.md` | ClickUp and Slite AI disclaimer format |
+| `rules/disclaimers.md` | Task and documentation AI disclaimer format |
 | `rules/approval-gate.md` | ADR human approval gate definition and state transitions |
 | `rules/cleanup.md` | `.tmp/<task-id>/` lifecycle and ownership per agent |
-| `rules/figma-conflict.md` | How to resolve Figma vs ADR conflicts |
+| `rules/design-conflict.md` | How to resolve UX-design vs ADR conflicts |

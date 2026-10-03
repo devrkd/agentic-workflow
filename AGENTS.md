@@ -12,7 +12,7 @@ A harness for four coordinated agents (Orchestrator, Architect, Developer, Staff
 ```bash
 cp .env.example .env
 # Required for this opencode setup: GITHUB_TOKEN (repo scope)
-# ClickUp / Slite / Figma are NOT wired for opencode — see MCP below.
+# The task / documentation / ux source categories are unbound by default — see MCP below.
 export GITHUB_TOKEN=...   # opencode reads env vars, it does not load .env automatically
 opencode
 ```
@@ -63,10 +63,38 @@ Agent files reference them by name (`architect-adr-authoring`, `developer-implem
 
 ## MCP
 
-opencode is configured with the **GitHub MCP server only** (`opencode.json` → `mcp.github`).
-ClickUp, Slite, and Figma are intentionally **not** wired for opencode. Skills that require them will tell you the source is unavailable and proceed with what is accessible. The Claude Code path (`.mcp.json`, claude.ai connectors) is unchanged.
+MCP sources are organised into three vendor-neutral **source categories**, each bound to a concrete provider **in config only**:
 
-GitHub tool names are prefixed with the server name: `github_*`. Use `{env:GITHUB_TOKEN}` interpolation syntax in `opencode.json` (not `${...}`).
+| Category | Purpose | Example providers you can plug in |
+|---|---|---|
+| `task` | Task / bug tracker | ClickUp, Jira, GitHub Issues, Linear |
+| `documentation` | Docs / wiki | Slite, Confluence, Notion, Google Docs |
+| `ux` | Design / UX | Figma, Sketch, Penpot |
+
+GitHub (repo/VCS) stays as-is — it is already generic and is the only server wired by default (`opencode.json` → `mcp.github`).
+
+### Binding a provider to a category
+
+The categories are declared in `opencode.json` under `mcp.task` / `mcp.documentation` / `mcp.ux` (disabled by default). To bind a provider:
+
+1. Replace the placeholder `url` (remote) or `command` (local) with your provider's MCP endpoint or package.
+2. Point the auth header/environment at your token (`TASK_PROVIDER_TOKEN`, `DOCUMENTATION_PROVIDER_TOKEN`, `UX_PROVIDER_TOKEN` in `.env.example`).
+3. Set `"enabled": true`.
+
+The Claude Code path binds the same categories under `.mcp.json` (`mcpServers.task` / `mcpServers.documentation` / `mcpServers.ux`).
+
+The invariant: **swapping a provider never requires touching agent prompts, commands, skills, rules, or schemas.** Only the config (and env token names) changes. Agents discover at runtime which category servers are connected; skills degrade gracefully (say the source is unavailable, proceed with what is accessible) when a category has no provider bound.
+
+Tool names are prefixed with the server key: `github_*` for GitHub, and `task_*` / `documentation_*` / `ux_*` when those categories are bound. Use `{env:GITHUB_TOKEN}` interpolation syntax in `opencode.json` (not `${...}`).
+
+### Migration from the vendor-specific config
+
+If you were running the earlier harness that named vendors directly, migrate as follows:
+
+1. **Rebind your MCP servers under the category keys** — your current ClickUp server becomes `mcp.task`, your Slite server becomes `mcp.documentation`, your Figma server becomes `mcp.ux`. The servers themselves keep working; only the harness vocabulary changed.
+2. **Update env var names** — `CLICKUP_API_TOKEN` → `TASK_PROVIDER_TOKEN`, `SLITE_API_TOKEN` → `DOCUMENTATION_PROVIDER_TOKEN`, `FIGMA_API_KEY` → `UX_PROVIDER_TOKEN` (or keep the old token names and reference them from the category binding).
+3. **Regenerate in-flight `handoff.json` files** — `skip_clickup` → `skip_task_tracking`, `figma_frames` → `design_frames`.
+4. **Update renamed skill references** (`architect-ux-intake`, `developer-ux-intake`, `staff-task-triage`) in any custom agent files or docs.
 
 ## File-Based Handoff
 
@@ -110,7 +138,7 @@ The bridge runs inside the opencode server, so anything Slack injects shows up t
 
 ## Shared Assets
 
-- [`rules/`](rules/) — cross-cutting policies (approval gate, disclaimers, cleanup, Figma conflicts)
+- [`rules/`](rules/) — cross-cutting policies (approval gate, disclaimers, cleanup, design conflicts)
 - [`schemas/`](schemas/) — handoff and state JSON schemas
 - [`scripts/`](scripts/) — `new-worktree.sh`, `clone-repo-for-analysis.sh`, `healthcheck.sh`, `slack-server.sh`
 - Branch naming: `agent/<task-id>/<role>` (Developer FR branches: `agent/<task-id>/<fr-label>`)

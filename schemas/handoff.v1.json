@@ -19,18 +19,18 @@
     "adr_url": {
       "type": "string",
       "format": "uri",
-      "description": "Approved Slite ADR document URL."
+      "description": "Approved ADR document URL or local reference (e.g. .tmp/<task-id>/adr.md)."
     },
     "adr_approved_at": {
       "type": "string",
       "description": "ISO-8601 timestamp when human approved the ADR."
     },
-    "skip_clickup": {
+    "skip_task_tracking": {
       "type": "boolean",
       "default": false,
       "description": "When true, sub_task id/url may be null; FRs referenced by label only."
     },
-    "figma_frames": {
+    "design_frames": {
       "type": "array",
       "items": {
         "type": "object",
@@ -58,11 +58,11 @@
         "properties": {
           "id": {
             "type": ["string", "null"],
-            "description": "ClickUp sub-task id; null when skip_clickup."
+            "description": "Task sub-task id; null when skip_task_tracking."
           },
           "url": {
             "type": ["string", "null"],
-            "description": "ClickUp sub-task URL; null when skip_clickup."
+            "description": "Task sub-task URL; null when skip_task_tracking."
           },
           "fr": { "type": "string" },
           "branch": { "type": "string" },

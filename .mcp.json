@@ -8,19 +8,26 @@
       },
       "oauth": false
     },
-    "slite": {
+    "task": {
+      "command": "npx",
+      "args": ["-y", "<your-task-provider-mcp>", "--stdio"],
+      "env": {
+        "TASK_PROVIDER_TOKEN": "${TASK_PROVIDER_TOKEN}"
+      }
+    },
+    "documentation": {
       "type": "remote",
-      "url": "https://api.slite.com/mcp/",
+      "url": "https://your-documentation-provider.example/mcp/",
       "headers": {
-        "Authorization": "Bearer ${SLITE_API_TOKEN}"
+        "Authorization": "Bearer ${DOCUMENTATION_PROVIDER_TOKEN}"
       },
       "oauth": false
     },
-    "figma": {
+    "ux": {
       "command": "npx",
-      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "args": ["-y", "<your-ux-provider-mcp>", "--stdio"],
       "env": {
-        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+        "UX_PROVIDER_TOKEN": "${UX_PROVIDER_TOKEN}"
       }
     }
   }

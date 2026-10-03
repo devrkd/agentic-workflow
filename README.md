@@ -6,13 +6,13 @@
 
 *Mentat* is named for the human computers of Frank Herbert's *Dune* — people trained to serve as disciplined logic and strategy engines rather than raw calculators. The name suits this harness: four specialist agents (Orchestrator, Architect, Developer, Staff) apply structured, disciplined reasoning and stop at explicit human approval gates instead of acting autonomously.
 
-Four coordinated AI agents (Orchestrator, Architect, Developer, Staff) running in Claude Code, backed by ClickUp, GitHub, Slite, and Figma via MCP.
+Four coordinated AI agents (Orchestrator, Architect, Developer, Staff) running in Claude Code, backed by GitHub plus three configurable source categories (`task` / `documentation` / `ux`) via MCP.
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
-# Fill in: CLICKUP_API_TOKEN, GITHUB_TOKEN, SLITE_API_TOKEN, FIGMA_API_KEY
+# Fill in: GITHUB_TOKEN; per category: TASK_PROVIDER_TOKEN, DOCUMENTATION_PROVIDER_TOKEN, UX_PROVIDER_TOKEN
 claude  # start Claude Code from this repo root, approve MCP servers when prompted
 ```
 
@@ -28,8 +28,8 @@ claude  # start Claude Code from this repo root, approve MCP servers when prompt
 ## Workflow
 
 ```
-/orchestrator RTD-541 skip_clickup
-  └─► /architect RTD-541          ← design + ADR in Slite
+/orchestrator RTD-541 skip_task_tracking
+  └─► /architect RTD-541          ← design + ADR in the documentation source
         └─► [human approves ADR]
               └─► /developer RTD-541   ← implement scoped FR
 ```
@@ -41,7 +41,7 @@ ADR approval is a hard gate — Developer will not start without it.
 ```
 .claude/commands/       Claude Code slash commands (orchestrator, architect, developer, staff)
 .claude/skills/         Step-by-step skill docs referenced from role prompts
-.mcp.json               MCP server config (GitHub, Slite, Figma; ClickUp via claude.ai cloud)
+.mcp.json               MCP server config (GitHub + task / documentation / ux category bindings)
 schemas/                handoff.v1.json schema + example
 scripts/
   new-worktree.sh       Provision isolated git worktrees per task/role
@@ -59,14 +59,25 @@ After ADR approval, Architect writes `.tmp/<task-id>/handoff.json` (schema: `sch
 
 ## MCP Servers
 
-| Server | Auth | How configured |
-|--------|------|----------------|
-| ClickUp | claude.ai cloud connector | Automatic (no `.mcp.json` entry needed) |
-| GitHub (Copilot remote) | `GITHUB_TOKEN` | `.mcp.json` remote |
-| Slite | `SLITE_API_TOKEN` (Bearer) | `.mcp.json` remote or claude.ai cloud |
-| Figma | `FIGMA_API_KEY` | `.mcp.json` stdio (`figma-developer-mcp`) |
+MCP sources are organised into three vendor-neutral **source categories**, each bound to a concrete provider in `.mcp.json` (`mcpServers.task` / `mcpServers.documentation` / `mcpServers.ux`):
+
+| Category | Auth | Example providers |
+|----------|------|-------------------|
+| `task` | `TASK_PROVIDER_TOKEN` | ClickUp, Jira, GitHub Issues, Linear |
+| `documentation` | `DOCUMENTATION_PROVIDER_TOKEN` | Slite, Confluence, Notion, Google Docs |
+| `ux` | `UX_PROVIDER_TOKEN` | Figma, Sketch, Penpot |
+| GitHub (remote) | `GITHUB_TOKEN` | — |
+
+The shipped `.mcp.json` contains placeholder bindings for the three categories — replace the placeholder `url`/`command`/`args` with your provider's MCP endpoint or package, and set the matching token in `.env`. Swapping providers never requires touching agent prompts or skills.
 
 Secrets go in `.env` — never commit them.
+
+### Migration from the vendor-specific config
+
+1. Rebind your MCP servers under the category keys — your current ClickUp server becomes `mcpServers.task`, your Slite server becomes `mcpServers.documentation`, your Figma server becomes `mcpServers.ux`.
+2. Rename env vars — `CLICKUP_API_TOKEN` → `TASK_PROVIDER_TOKEN`, `SLITE_API_TOKEN` → `DOCUMENTATION_PROVIDER_TOKEN`, `FIGMA_API_KEY` → `UX_PROVIDER_TOKEN`.
+3. Regenerate in-flight `handoff.json` files — `skip_clickup` → `skip_task_tracking`, `figma_frames` → `design_frames`.
+4. Update references to the renamed skills (`architect.ux-intake`, `developer.ux-intake`, `staff.task-triage`).
 
 ## Slack Bridge (opencode)
 

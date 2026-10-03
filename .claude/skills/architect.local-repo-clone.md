@@ -5,7 +5,7 @@ Clone target product repositories into the workspace scratch area so Architect c
 
 ## Inputs
 - **`task_id`** (required) — e.g. `RTD-541` or `audit-rfq-config`; used for `.tmp/<task-id>/`
-- **Repo** — URL (`https://github.com/owner/repo`) or slug (`owner/repo`); may come from invocation, Slite doc, or ClickUp task
+- **Repo** — URL (`https://github.com/owner/repo`) or slug (`owner/repo`); may come from invocation, documentation page, or task
 - **`ref`** (optional) — branch, tag, or commit; default is remote default branch (shallow clone)
 
 ## When to run

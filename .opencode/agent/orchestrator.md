@@ -35,7 +35,7 @@ Route to Developer when:
 - "implement", "build", "code", "fix", "develop", "ship", "execute", "do the task", "run the subtasks"
 - "write the code", "open a PR", "create a branch"
 
-If `.tmp/<task-id>/handoff.json` exists, Developer should prefer it for richer context (ADR URL, FR scope, Figma frames).
+If `.tmp/<task-id>/handoff.json` exists, Developer should prefer it for richer context (ADR URL, FR scope, design frames).
 
 ### Architect signals (default for analysis and design)
 
@@ -91,8 +91,8 @@ The model for each role is fixed by the agent definition — do not try to overr
 
 Prompt the **staff** subagent to:
 
-- Act as a **read-only analyst** — never write to or mutate any external system (GitHub, ClickUp, Slite, Figma)
-- Use all available MCP servers in read mode only. **Only the GitHub MCP server is wired in opencode**; if a required source (ClickUp/Slite/Figma) is unavailable, say so and proceed with what is accessible.
+- Act as a **read-only analyst** — never write to or mutate any external system (GitHub, or the `task` / `documentation` / `ux` category sources)
+- Use all available MCP servers in read mode only. **Only the GitHub MCP server is wired in opencode by default**; the `task` / `documentation` / `ux` category servers may or may not be bound in `opencode.json`. If a required source is unavailable, say so and proceed with what is accessible.
 - Analyse the request thoroughly: cross-reference sources, identify gaps, flag inconsistencies, assess risks
 - **Always write findings to a handoff document** at `.tmp/<task-id>/analysis-handoff.json` (use `analysis` as task-id if no real task ID present) with this structure:
   ```json
@@ -117,8 +117,8 @@ Prompt the **architect** subagent to:
 
 - Follow the Architect role instructions and load the relevant `architect-*` skills as needed
 - **Task ID is optional** — extract from input if present; if not, proceed without it
-- Pass through all refs from the request (doc URL, repo URL, `skip_clickup`)
-- **MCP:** use the GitHub MCP server (`github_*`). ClickUp/Slite/Figma are not wired — if a requested source is unavailable, say so and continue with accessible sources.
+- Pass through all refs from the request (doc URL, repo URL, `skip_task_tracking`)
+- **MCP:** use the GitHub MCP server (`github_*`). The `task` / `documentation` / `ux` category servers may not be bound in this environment — if a requested source is unavailable, say so and continue with accessible sources.
 - Produce design/plan output: ADR, doc updates, repo analysis, tech decisions
 - If task ID is present and design requires implementation: write `.tmp/<task-id>/handoff.json` with sub-tasks for Developer
 - Return outcome (ADR URL, design docs, blockers)
@@ -196,5 +196,5 @@ If the subagent returned a blocker, escalate it clearly with options. Never sile
 - Never bypass the ADR approval gate
 - Staff never mutates external systems — enforce this in the prompt you send it
 - State tracking: maintain `.tmp/<task-id>/state.json` (sub-task status: `pending` / `in_progress` / `completed` / `blocked`)
-- ClickUp/Slite content disclaimer: pass through to every subagent per `rules/disclaimers.md`
+- Task/documentation content disclaimer: pass through to every subagent per `rules/disclaimers.md`
 - Worktree policy: enforce per `rules/cleanup.md` and `scripts/new-worktree.sh`

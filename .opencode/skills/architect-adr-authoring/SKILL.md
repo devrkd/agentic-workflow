@@ -8,7 +8,7 @@ description: Author architecture decision records (ADRs) covering API changes, f
 ## Purpose
 Create architecture decision records (ADRs) using the canonical ADR template. This skill is **mandatory for every task** and must be executed before the Developer handoff is produced.
 
-> **MCP availability:** Slite is **not** wired in this opencode setup. When no doc system is available, write the ADR as local markdown at `.tmp/<task-id>/adr.md` and use that path as `adr_url` in the handoff. All template/section rules below still apply.
+> **MCP availability:** the `documentation` category is **not** bound to an MCP server in this opencode setup. When no doc system is available, write the ADR as local markdown at `.tmp/<task-id>/adr.md` and use that path as `adr_url` in the handoff. All template/section rules below still apply.
 
 ## Required Template
 - ADR template URL: 

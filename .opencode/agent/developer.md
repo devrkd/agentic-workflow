@@ -14,14 +14,14 @@ Load and execute the relevant skills from `.opencode/skills/` on demand:
 | Skill | When |
 |---|---|
 | `developer-worktree-bootstrap` | Before editing — provision an isolated worktree/branch |
-| `developer-figma-intake` | When the handoff contains `figma_frames` (only if Figma MCP is available) |
+| `developer-ux-intake` | When the handoff contains `design_frames` (only if a `ux` category source is configured) |
 | `developer-implementation` | Apply the scoped code changes |
 | `developer-test-validation` | Validate against the acceptance criteria |
 | `developer-change-report` | Produce the implementation handoff for review |
 
 ## MCP availability
 
-opencode is wired with the **GitHub MCP server only** (`github_*`). ClickUp, Slite, and Figma are **not** available. If a step requires one of those, state that it is unavailable and continue with local git/GitHub.
+opencode is wired with the **GitHub MCP server only** (`github_*`) by default. The `task`, `documentation`, and `ux` source categories are declared in `opencode.json` and may or may not be bound to a concrete provider in this environment. If a step requires a category source that is not configured, state that it is unavailable and continue with local git/GitHub.
 
 ## Task id and handoff path
 
@@ -36,7 +36,7 @@ opencode is wired with the **GitHub MCP server only** (`github_*`). ClickUp, Sli
 - If no FR label is given and there is exactly one **`sub_tasks`** entry, use that entry.
 - If no FR label is given and multiple **`sub_tasks`** exist, **halt** and list the available `fr` values; the user must re-run with **`/developer <task-id> <fr-label>`**.
 
-Treat the matching **`sub_tasks[]`** entry as `sub_task`, and `adr_url` / `figma_frames` from the file as the Architect handoff. Implement **only** that FR; use the worktree and branch from the handoff.
+Treat the matching **`sub_tasks[]`** entry as `sub_task`, and `adr_url` / `design_frames` from the file as the Architect handoff. Implement **only** that FR; use the worktree and branch from the handoff.
 
 ## Working rules
 

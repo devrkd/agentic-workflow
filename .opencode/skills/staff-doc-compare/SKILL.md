@@ -8,7 +8,7 @@ description: Compare two or more documents to surface gaps, contradictions, cove
 ## Purpose
 Compare two or more documents to surface gaps, contradictions, coverage overlaps, and missing requirements. Read-only — never modifies any document.
 
-> **MCP availability:** Slite is **not** wired in this opencode setup. If no doc MCP is available, ask the user to provide the documents as local files or pasted text, then compare those.
+> **MCP availability:** the `documentation` category is **not** bound to an MCP server in this opencode setup. If no documentation source is configured, ask the user to provide the documents as local files or pasted text, then compare those.
 
 ## When to Run
 - Two or more doc IDs/URLs are provided
