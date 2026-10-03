@@ -5,22 +5,18 @@ import type { PluginInput } from "@opencode-ai/plugin"
 import type { Session } from "@opencode-ai/sdk"
 import { loadConfig } from "./config.ts"
 import { SessionMap, type SessionRef } from "./session-map.ts"
-import { LineBatch } from "./throttle.ts"
 import {
   childSessionRootText,
   childThreadPointerText,
-  errorText,
-  idleText,
   normalizePermission,
   normalizeQuestion,
   permissionBlocks,
   permissionText,
   questionBlocks,
   questionText,
+  recentContextLines,
   resolvedBlocks,
   sessionRootText,
-  todoText,
-  toolProgressLine,
   type PermissionAction,
   type PermissionInfo,
   type QuestionRequestInfo,
@@ -28,21 +24,8 @@ import {
 
 type OpenCodeClient = PluginInput["client"]
 
-export type ToolHookInput = {
-  tool: string
-  sessionID: string
-  callID: string
-}
-
-export type ToolHookOutput = {
-  title: string
-  output: string
-  metadata: unknown
-}
-
 export type Bridge = {
   onEvent(event: { type: string; properties: unknown }): Promise<void>
-  onTool(input: ToolHookInput, output: ToolHookOutput): Promise<void>
   dispose(): Promise<void>
 }
 
@@ -97,12 +80,6 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
   if (config.allowedUsers.length === 0) {
     await log("warn", "SLACK_ALLOWED_USERS is empty; any member of the channel can answer approvals")
   }
-
-  const batch = new LineBatch(async (sessionID, lines) => {
-    const ref = await ensureThread(sessionID)
-    if (!ref) return
-    await postThread(ref, lines.join("\n"))
-  })
 
   async function resolveParentTitle(parentID: string): Promise<string> {
     try {
@@ -239,14 +216,18 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         })
       }
     }
-    batch.flushNow(permission.sessionID)
+    const context = recentContextLines(await lastAssistantText(permission.sessionID))
     try {
       const posted = await web.chat.postMessage({
         channel: ref.channel,
         thread_ts: ref.ts,
         text: permissionText(permission),
-        blocks: permissionBlocks(permission, ref.title, ACTION_PREFIX, (action) =>
-          permissionValue(permission, action),
+        blocks: permissionBlocks(
+          permission,
+          ref.title,
+          ACTION_PREFIX,
+          (action) => permissionValue(permission, action),
+          context,
         ),
       })
       if (posted.ts) {
@@ -396,14 +377,14 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         })
       }
     }
-    batch.flushNow(info.sessionID)
+    const context = recentContextLines(await lastAssistantText(info.sessionID))
     const selected = info.questions.map(() => [] as string[])
     try {
       const posted = await web.chat.postMessage({
         channel: ref.channel,
         thread_ts: ref.ts,
         text: questionText(info),
-        blocks: questionBlocks(info, ref.title, ACTION_PREFIX, selected),
+        blocks: questionBlocks(info, ref.title, ACTION_PREFIX, selected, undefined, context),
       })
       if (!posted.ts) return
       pendingQuestions.set(info.id, {
@@ -525,33 +506,23 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         return
       }
       case "session.idle": {
-        const { sessionID } = event.properties as { sessionID: string }
-        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
-        batch.flushNow(sessionID)
-        const ref = await ensureThread(sessionID)
-        if (!ref) return
-        const summary = await lastAssistantText(sessionID)
-        await postThread(ref, idleText(summary))
-        await log("info", "posted completion", { sessionID })
+        // Routine progress is intentionally not mirrored to Slack; the only
+        // proactive posts are approval and question cards.
         return
       }
       case "session.error": {
         const { sessionID, error } = event.properties as { sessionID?: string; error?: unknown }
         if (!sessionID) return
-        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
-        batch.flushNow(sessionID)
-        const ref = await ensureThread(sessionID)
-        if (!ref) return
-        await postThread(ref, errorText(error))
+        // Errors are not posted to Slack (they can contain host detail);
+        // they stay in the local opencode app log.
+        await log("error", "session error (not posted to Slack)", {
+          sessionID,
+          error: describeError(error),
+        })
         return
       }
       case "todo.updated": {
-        const { sessionID, todos } = event.properties as { sessionID: string; todos: Parameters<typeof todoText>[0] }
-        if (childSessions.has(sessionID) && !sessions.has(sessionID)) return
-        batch.flushNow(sessionID)
-        const ref = await ensureThread(sessionID)
-        if (!ref) return
-        await postThread(ref, todoText(todos))
+        // Plan updates are routine progress and are not mirrored to Slack.
         return
       }
       case "permission.asked":
@@ -600,15 +571,6 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     }
   }
 
-  async function onTool(inputTool: ToolHookInput, output: ToolHookOutput): Promise<void> {
-    if (childSessions.has(inputTool.sessionID) && !sessions.has(inputTool.sessionID)) return
-    if (!sessions.has(inputTool.sessionID)) {
-      const ref = await ensureThread(inputTool.sessionID)
-      if (!ref) return
-    }
-    batch.push(inputTool.sessionID, toolProgressLine(inputTool.tool, output.title))
-  }
-
   function authorized(userID: string | undefined): boolean {
     if (!userID) return false
     if (config.allowedUsers.length === 0) return true
@@ -652,11 +614,15 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         return
       }
       const index = Number(payload.index)
-      const label = String(payload.label ?? "")
-      const multiple = payload.multiple === true
-      if (!Number.isInteger(index) || !label) return
+      const optionIndex = Number(payload.optionIndex)
+      if (!Number.isInteger(index) || !Number.isInteger(optionIndex)) return
+      const question = pending.info.questions[index]
+      // Resolve the option from the pending request itself instead of
+      // trusting anything in the button payload.
+      const label = question?.options[optionIndex]?.label
+      if (!question || !label) return
       const current = pending.selected[index] ?? []
-      if (multiple) {
+      if (question.multiple) {
         pending.selected[index] = current.includes(label)
           ? current.filter((item) => item !== label)
           : [...current, label]
@@ -892,9 +858,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
 
   return {
     onEvent,
-    onTool,
     dispose: async () => {
-      batch.dispose()
       try {
         await socket.disconnect()
       } catch {
