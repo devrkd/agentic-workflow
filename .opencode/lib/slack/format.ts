@@ -126,6 +126,36 @@ export function recentContextLines(text: string, maxLines = 3, maxChars = 160): 
     .join("\n")
 }
 
+/** One recent message worth of role-labelled text for a `/status` reply. */
+export type StatusActivity = {
+  role: string
+  text: string
+}
+
+/**
+ * Text for the ephemeral `/status` reply: the session title, any pending
+ * approval/question markers, and the last few activity lines. Everything is
+ * redacted and truncated exactly like the cards, so no host detail leaks.
+ */
+export function sessionStatusText(
+  title: string,
+  pending: { approval: boolean; question: boolean },
+  activity: StatusActivity[],
+): string {
+  const name = escapeMrkdwn(truncate(redactHostInfo(title) || "untitled session", 120))
+  const parts = [`*Session status* — ${name}`]
+  if (pending.approval) parts.push("⏳ _Awaiting approval._")
+  if (pending.question) parts.push("❓ _Question pending._")
+  const lines = activity
+    .map((entry) => {
+      const context = recentContextLines(entry.text, 2, 200)
+      return context ? `_${escapeMrkdwn(entry.role)}_:\n${escapeMrkdwn(context)}` : ""
+    })
+    .filter((line) => line.length > 0)
+  parts.push(lines.length > 0 ? `_Recent activity:_\n${lines.join("\n")}` : "_No recent activity._")
+  return parts.join("\n")
+}
+
 /**
  * Approval-card detail lines. Only the permission command and the always
  * patterns are forwarded, both redacted. Raw `filePath` / `file` / `path` /
