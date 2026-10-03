@@ -106,7 +106,7 @@ An opencode plugin bridges opencode sessions to Slack and lets you answer approv
 
 - **Out** — one thread per session in the configured channel, used only for approval/question cards with a compact, redacted context summary. Routine progress (tool runs, plan, completion summary, errors) is not posted, and host-specific detail (absolute paths, hostnames, usernames) is redacted from everything posted. A loader reaction (`:hourglass_flowing_sand:`) on the session's root message shows work in progress: it is added when the session starts or new activity arrives (a card is posted, a Slack reply is injected) and removed when the session goes idle or is deleted.
 - **In** — permission/approval prompts post as interactive messages with **Approve once / Always / Reject** buttons. The agent's `question` tool posts option buttons too. Replying in the thread injects a prompt into the running session; `!abort` stops it.
-- **Status** — `/status [text]` in any channel replies (ephemerally, only to you) with the session's title, pending approval/question state, and its last few activity lines, all redacted. `/status` alone picks the most recent session in that channel; with `text` it matches a session title or ID.
+- **Status** — `/s [text]` in any channel replies (ephemerally, only to you) with the session's title, pending approval/question state, and its last few activity lines, all redacted. `/s` alone picks the most recent session in that channel; with `text` it matches a session title or ID. (`/status` is reserved by Slack, so the command is registered as `/s`.)
 
 ### Setup
 
@@ -114,7 +114,7 @@ An opencode plugin bridges opencode sessions to Slack and lets you answer approv
 2. Bot scopes: `chat:write`, `channels:read`, plus `channels:history` (public) or `groups:history` (private), `users:read`, `reactions:write`, `commands`.
 3. Generate an **App-Level Token** with `connections:write`, and **Install** to get the Bot token.
 4. Turn **Interactivity** on (for the approval buttons), and under **Event Subscriptions** subscribe to `message.channels` (public) or `message.groups` (private) so thread replies reach the agent.
-5. Register the slash command: **Features → Slash Commands → Create New Command** with command `/status`. Leave the Request URL blank — Socket Mode delivers invocations over the existing socket, and the current event subscriptions are unchanged.
+5. Register the slash command: **Features → Slash Commands → Create New Command** with command `/s` (Slack reserves `/status`, so the shorter command is used). Leave the Request URL blank — Socket Mode delivers invocations over the existing socket, and the current event subscriptions are unchanged.
 6. **Reinstall** the app to the workspace so the new `commands` scope and slash command apply.
 7. `/invite` the app to the target channel and copy its channel ID.
 8. Fill `.env`: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_CHANNEL`, and `SLACK_ALLOWED_USERS` (your Slack member ID — recommended, or anyone in the channel can approve commands).
@@ -135,7 +135,7 @@ The bridge runs inside the opencode server, so anything Slack injects shows up t
   opencode attach http://127.0.0.1:4096
   ```
   `opencode web` is the same view in a browser.
-- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `approval card posted`, `/status served`, `session error (not posted to Slack)`) alongside opencode's loop/tool logs.
+- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `approval card posted`, `/s served`, `session error (not posted to Slack)`) alongside opencode's loop/tool logs.
 
 > The plugin reads `.env` itself, so `SLACK_*` values do not need to be exported. `GITHUB_TOKEN` is still read from the environment by `opencode.json`.
 

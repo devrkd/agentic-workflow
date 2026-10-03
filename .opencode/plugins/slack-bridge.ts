@@ -9,7 +9,7 @@ import { createBridge } from "../lib/slack/bridge.ts"
  * - Shows an in-progress loader reaction (:hourglass_flowing_sand:) on the
  *   session's root message while it works — added when the session starts or
  *   new activity arrives, removed when it idles or is deleted.
- * - Handles the /status slash command: an ephemeral reply with the session's
+ * - Handles the /s slash command: an ephemeral reply with the session's
  *   last few activity lines, pending approval/question state, all redacted.
  * - Lets you answer approvals and questions with buttons and inject thread
  *   replies back into the running session as prompts.

@@ -126,14 +126,14 @@ export function recentContextLines(text: string, maxLines = 3, maxChars = 160): 
     .join("\n")
 }
 
-/** One recent message worth of role-labelled text for a `/status` reply. */
+/** One recent message worth of role-labelled text for a `/s` reply. */
 export type StatusActivity = {
   role: string
   text: string
 }
 
 /**
- * Text for the ephemeral `/status` reply: the session title, any pending
+ * Text for the ephemeral `/s` reply: the session title, any pending
  * approval/question markers, and the last few activity lines. Everything is
  * redacted and truncated exactly like the cards, so no host detail leaks.
  */
