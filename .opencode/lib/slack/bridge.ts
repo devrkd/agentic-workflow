@@ -916,7 +916,8 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
   }
 
   /**
-   * Handles the `/status` slash command (Socket Mode `slash_commands` event).
+   * Handles the `/s` slash command (Socket Mode `slash_commands` event).
+   * (`/status` is reserved by Slack, so the registered command is `/s`.)
    * Replies ephemerally with the target session's title, pending
    * approval/question state, and its last few activity lines — redacted and
    * truncated by the shared helpers, so no host detail leaks.
@@ -927,8 +928,8 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
     if (!userID || !channelID) return
 
     if (!authorized(userID)) {
-      await log("warn", "ignored /status from unauthorized user", { user: userID })
-      await replyEphemeral(channelID, userID, "You are not allowed to use `/status`.")
+      await log("warn", "ignored /s from unauthorized user", { user: userID })
+      await replyEphemeral(channelID, userID, "You are not allowed to use `/s`.")
       return
     }
 
@@ -996,7 +997,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
       userID,
       sessionStatusText(ref.title, { approval: pendingApproval, question: pendingQuestion }, activity),
     )
-    await log("info", "/status served", { sessionID: targetID, user: userID })
+    await log("info", "/s served", { sessionID: targetID, user: userID })
   }
 
   socket.on("slack_event", async (args: { ack?: () => Promise<void>; body: unknown }) => {
@@ -1014,7 +1015,7 @@ export async function createBridge(input: PluginInput): Promise<Bridge | null> {
         await onSlackMessage(body as Parameters<typeof onSlackMessage>[0])
       } else if (body.type === "slash_commands") {
         const slash = body as SlashCommandBody
-        if (slash.command === "/status") await onSlashCommand(slash)
+        if (slash.command === "/s") await onSlashCommand(slash)
       }
     } catch (error) {
       await log("error", "slack event handler failed", { error: String(error) })
