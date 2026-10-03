@@ -1,4 +1,5 @@
-import type { Todo } from "@opencode-ai/sdk"
+import { basename } from "node:path"
+import { homedir } from "node:os"
 import type { KnownBlock } from "@slack/types"
 
 export type SlackBlock = KnownBlock
@@ -58,76 +59,92 @@ export function truncate(text: string, max = 280): string {
   return `${clean.slice(0, max - 1).trimEnd()}…`
 }
 
+/**
+ * Strips host-specific detail from arbitrary text before it is posted to
+ * Slack. Absolute macOS/Linux paths, Windows drive paths, and UNC share
+ * paths are replaced with a `[path]` placeholder so no hostnames,
+ * usernames, or local directory structure leak into the channel.
+ */
+export function redactHostInfo(text: string): string {
+  const unixAbsolute = /(?<![\w./~-])\/(?:Users|home|root|private|var|tmp|etc|opt|usr|Volumes)\/[^\s"'`()<>[\]{}|;,]*/g
+  const windowsDrive = /\b[A-Za-z]:\\[^\s"'`()<>[\]{}|;,]*/g
+  const uncShare = /\\\\[^\\\s]+\\[^\s"'`()<>[\]{}|;,]*/g
+  return (text ?? "")
+    .replace(unixAbsolute, "[path]")
+    .replace(windowsDrive, "[path]")
+    .replace(uncShare, "[path]")
+}
+
+/**
+ * Project name for a working directory, without any host detail. Returns
+ * the directory's basename — the repo/project the agent is working on —
+ * unless the session runs at the user's home directory itself, in which
+ * case there is no project name to show.
+ */
+export function projectName(directory?: string): string {
+  const dir = (directory ?? "").trim()
+  if (!dir || dir === homedir()) return ""
+  return basename(dir)
+}
+
 export function sessionRootText(title: string, directory?: string): string {
-  const name = escapeMrkdwn(truncate(title || "untitled session", 120))
-  const where = directory ? `\n_${escapeMrkdwn(directory)}_` : ""
-  return `*Session started* — ${name}${where}\nProgress, approvals and replies stay in this thread.`
+  const name = escapeMrkdwn(truncate(redactHostInfo(title) || "untitled session", 120))
+  const project = projectName(directory)
+  const where = project ? `\n_Project: ${escapeMrkdwn(project)}_` : ""
+  return `*Session started* — ${name}${where}\nApprovals and replies stay in this thread.`
 }
 
 /** Root message for a child (subagent) session thread, created lazily. */
 export function childSessionRootText(title: string, parentTitle?: string): string {
-  const name = escapeMrkdwn(truncate(title || "untitled subagent", 120))
-  const parent = parentTitle ? ` _(child of ${escapeMrkdwn(truncate(parentTitle, 80))})_` : ""
+  const name = escapeMrkdwn(truncate(redactHostInfo(title) || "untitled subagent", 120))
+  const parent = parentTitle
+    ? ` _(child of ${escapeMrkdwn(truncate(redactHostInfo(parentTitle), 80))})_`
+    : ""
   return `*Subagent session* — ${name}${parent}\nApprovals and replies for this subagent stay in this thread.`
 }
 
 /** One-line notice dropped into the parent thread when a child thread is created. */
 export function childThreadPointerText(childTitle: string): string {
-  return `🛑 Subagent _${escapeMrkdwn(truncate(childTitle, 80))}_ is requesting approval — see its thread below.`
+  return `🛑 Subagent _${escapeMrkdwn(truncate(redactHostInfo(childTitle), 80))}_ is requesting approval — see its thread below.`
 }
 
-export function toolProgressLine(tool: string, title: string): string {
-  const label = escapeMrkdwn(truncate(title || tool, 160))
-  return `• \`${tool}\` ${label}`
+/**
+ * Compact, redacted context summary: the last few non-empty lines of text
+ * (e.g. the tail of the last assistant message), suitable for the context
+ * block of an approval or question card.
+ */
+export function recentContextLines(text: string, maxLines = 3, maxChars = 160): string {
+  const clean = (text ?? "").trim()
+  if (!clean) return ""
+  const lines = clean
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  return lines
+    .slice(-maxLines)
+    .map((line) => redactHostInfo(truncate(line, maxChars)))
+    .join("\n")
 }
 
-const TODO_MARKERS: Record<string, string> = {
-  completed: "[x]",
-  in_progress: "[>]",
-  cancelled: "[-]",
-  pending: "[ ]",
-}
-
-export function todoText(todos: Todo[]): string {
-  if (!todos || todos.length === 0) return "*Plan* — (empty)"
-  const lines = todos.map((todo) => {
-    const marker = TODO_MARKERS[todo.status] ?? "[ ]"
-    return `${marker} ${escapeMrkdwn(truncate(todo.content, 200))}`
-  })
-  return `*Plan*\n${lines.join("\n")}`
-}
-
-export function idleText(summary?: string): string {
-  const body = summary ? `\n\n>${escapeMrkdwn(truncate(summary, 600)).replace(/\n/g, "\n>")}` : ""
-  return `*Done.*${body}`
-}
-
-export function errorText(error: unknown): string {
-  if (!error || typeof error !== "object") return "*Error* — the session reported an error."
-  const name =
-    typeof (error as { name?: unknown }).name === "string" ? (error as { name: string }).name : "Error"
-  const data = (error as { data?: { message?: unknown } }).data
-  const message = data && typeof data.message === "string" ? data.message : "no further detail"
-  return `*${escapeMrkdwn(name)}* — ${escapeMrkdwn(truncate(message, 500))}`
-}
-
+/**
+ * Approval-card detail lines. Only the permission command and the always
+ * patterns are forwarded, both redacted. Raw `filePath` / `file` / `path` /
+ * `url` / `query` metadata is never echoed to Slack.
+ */
 function permissionDetails(permission: PermissionInfo): string[] {
   const details: string[] = []
-  const metadata = permission.metadata
-  for (const key of ["command", "filePath", "file", "path", "url", "query"]) {
-    const value = metadata[key]
-    if (typeof value === "string" && value.trim()) {
-      details.push(`${key}: \`${escapeMrkdwn(truncate(value, 300))}\``)
-    }
+  const command = permission.metadata.command
+  if (typeof command === "string" && command.trim()) {
+    details.push(`command: \`${escapeMrkdwn(truncate(redactHostInfo(command), 300))}\``)
   }
   if (permission.always.length > 0) {
-    details.push(`always: \`${escapeMrkdwn(truncate(permission.always.join(", "), 200))}\``)
+    details.push(`always: \`${escapeMrkdwn(truncate(redactHostInfo(permission.always.join(", ")), 200))}\``)
   }
   return details
 }
 
 export function permissionText(permission: PermissionInfo): string {
-  return `Approval needed: ${permission.title}`
+  return `Approval needed: ${escapeMrkdwn(truncate(redactHostInfo(permission.title), 250))}`
 }
 
 export type PermissionAction = "once" | "always" | "reject"
@@ -137,16 +154,17 @@ export function permissionBlocks(
   sessionTitle: string,
   actionPrefix: string,
   valueFor: (action: PermissionAction) => string,
+  context?: string,
 ): SlackBlock[] {
-  const title = escapeMrkdwn(truncate(permission.title || "action requires approval", 250))
+  const title = escapeMrkdwn(truncate(redactHostInfo(permission.title || "action requires approval"), 250))
   const details = permissionDetails(permission)
   const contextParts = [
-    `session: _${escapeMrkdwn(truncate(sessionTitle, 80))}_`,
+    `session: _${escapeMrkdwn(truncate(redactHostInfo(sessionTitle), 80))}_`,
     `type: \`${escapeMrkdwn(permission.kind)}\``,
   ]
   if (details.length > 0) contextParts.push(details.join("  ·  "))
 
-  return [
+  const blocks: SlackBlock[] = [
     {
       type: "section",
       text: { type: "mrkdwn", text: `*Approval needed*\n${title}` },
@@ -155,41 +173,48 @@ export function permissionBlocks(
       type: "context",
       elements: [{ type: "mrkdwn", text: contextParts.join("\n") }],
     },
-    {
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          action_id: `${actionPrefix}:once`,
-          text: { type: "plain_text", text: "Approve once" },
-          style: "primary",
-          value: valueFor("once"),
-        },
-        {
-          type: "button",
-          action_id: `${actionPrefix}:always`,
-          text: { type: "plain_text", text: "Always" },
-          value: valueFor("always"),
-        },
-        {
-          type: "button",
-          action_id: `${actionPrefix}:reject`,
-          text: { type: "plain_text", text: "Reject" },
-          style: "danger",
-          value: valueFor("reject"),
-        },
-      ],
-    },
-    {
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: "You can also reply in this thread to send a prompt, or send `!abort` to stop the session.",
-        },
-      ],
-    },
   ]
+  if (context) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*Recent context*\n${escapeMrkdwn(truncate(redactHostInfo(context), 600))}` },
+    })
+  }
+  blocks.push({
+    type: "actions",
+    elements: [
+      {
+        type: "button",
+        action_id: `${actionPrefix}:once`,
+        text: { type: "plain_text", text: "Approve once" },
+        style: "primary",
+        value: valueFor("once"),
+      },
+      {
+        type: "button",
+        action_id: `${actionPrefix}:always`,
+        text: { type: "plain_text", text: "Always" },
+        value: valueFor("always"),
+      },
+      {
+        type: "button",
+        action_id: `${actionPrefix}:reject`,
+        text: { type: "plain_text", text: "Reject" },
+        style: "danger",
+        value: valueFor("reject"),
+      },
+    ],
+  })
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: "You can also reply in this thread to send a prompt, or send `!abort` to stop the session.",
+      },
+    ],
+  })
+  return blocks
 }
 
 export function resolvedBlocks(label: string): SlackBlock[] {
@@ -244,7 +269,8 @@ export function normalizeQuestion(raw: unknown): QuestionRequestInfo {
 }
 
 export function questionText(info: QuestionRequestInfo): string {
-  return `Input needed: ${info.questions[0]?.header ?? "the agent has a question"}`
+  const header = info.questions[0]?.header ?? "the agent has a question"
+  return `Input needed: ${escapeMrkdwn(truncate(redactHostInfo(header), 120))}`
 }
 
 export function questionBlocks(
@@ -253,21 +279,29 @@ export function questionBlocks(
   actionPrefix: string,
   selected: string[][],
   notice?: string,
+  context?: string,
 ): SlackBlock[] {
   const blocks: unknown[] = [
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*Input needed* — _${escapeMrkdwn(truncate(sessionTitle, 80))}_`,
+        text: `*Input needed* — _${escapeMrkdwn(truncate(redactHostInfo(sessionTitle), 80))}_`,
       },
     },
   ]
 
+  if (context) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*Recent context*\n${escapeMrkdwn(truncate(redactHostInfo(context), 600))}` },
+    })
+  }
+
   info.questions.forEach((question, index) => {
     const chosen = selected[index] ?? []
-    const header = `*Q${index + 1}. ${escapeMrkdwn(truncate(question.header, 60))}*`
-    const body = escapeMrkdwn(truncate(question.question, 500))
+    const header = `*Q${index + 1}. ${escapeMrkdwn(truncate(redactHostInfo(question.header), 60))}*`
+    const body = escapeMrkdwn(truncate(redactHostInfo(question.question), 500))
     const hints: string[] = []
     if (question.multiple) hints.push("_Select one or more, then Submit._")
     if (question.custom) hints.push("_Or reply in the thread with your own answer._")
@@ -279,14 +313,13 @@ export function questionBlocks(
         const button: Record<string, unknown> = {
           type: "button",
           action_id: `${actionPrefix}:qopt:${index}:${optionIndex}`,
-          text: { type: "plain_text", text: truncate(option.label || option.description, 75) },
+          text: { type: "plain_text", text: truncate(redactHostInfo(option.label || option.description), 75) },
           value: JSON.stringify({
             kind: "qopt",
             requestID: info.id,
             sessionID: info.sessionID,
             index,
-            label: option.label,
-            multiple: question.multiple,
+            optionIndex,
           }),
         }
         if (chosen.includes(option.label)) button.style = "primary"

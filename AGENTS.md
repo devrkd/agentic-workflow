@@ -74,9 +74,9 @@ After ADR approval, Architect writes `.tmp/<task-id>/handoff.json` (schema: [`sc
 
 ## Slack Bridge
 
-An opencode plugin mirrors agent sessions into Slack and lets you answer approvals from Slack instead of the terminal. Useful for long `/architect` or `/developer` runs you want to monitor away from the keyboard.
+An opencode plugin bridges opencode sessions to Slack and lets you answer approvals from Slack instead of the terminal. Useful for long `/architect` or `/developer` runs you want to monitor away from the keyboard.
 
-- **Out** — one thread per session in the configured channel: tool runs, plan (`todo.updated`), completion summary (`session.idle`) and errors.
+- **Out** — one thread per session in the configured channel, used only for approval/question cards with a compact, redacted context summary. Routine progress (tool runs, plan, completion summary, errors) is not posted, and host-specific detail (absolute paths, hostnames, usernames) is redacted from everything posted.
 - **In** — permission/approval prompts post as interactive messages with **Approve once / Always / Reject** buttons. The agent's `question` tool posts option buttons too. Replying in the thread injects a prompt into the running session; `!abort` stops it.
 
 ### Setup
@@ -104,7 +104,7 @@ The bridge runs inside the opencode server, so anything Slack injects shows up t
   opencode attach http://127.0.0.1:4096
   ```
   `opencode web` is the same view in a browser.
-- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `posted completion`) alongside opencode's loop/tool logs.
+- **Logs only** — `opencode serve --print-logs --log-level DEBUG` prints bridge lines (`injected Slack reply`, `approval card posted`, `session error (not posted to Slack)`) alongside opencode's loop/tool logs.
 
 > The plugin reads `.env` itself, so `SLACK_*` values do not need to be exported. `GITHUB_TOKEN` is still read from the environment by `opencode.json`.
 

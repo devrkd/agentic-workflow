@@ -72,7 +72,7 @@ Secrets go in `.env` — never commit them.
 
 Watch and steer opencode agent runs from Slack. An auto-loaded plugin posts each session into its own Slack thread and turns permission prompts into buttons you can answer from Slack.
 
-- **Progress out**: tool runs, the agent's plan, completion summaries, and errors.
+- **Progress out**: none — the channel only receives approval/question cards (with a compact, redacted context summary); routine progress (tool runs, plans, completions, errors) stays out of Slack, and host-specific detail (paths, hostnames, usernames) is redacted.
 - **Input back**: **Approve once / Always / Reject** buttons on approval prompts, option buttons for the agent's `question` tool; thread replies are injected into the running session as prompts; `!abort` stops it.
 
 ### Watching Slack-triggered work in the terminal
