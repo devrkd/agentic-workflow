@@ -47,7 +47,7 @@ Implements the approved design for a **single scoped functional requirement (FR)
 
 ## Staff
 
-A deep-reading, **read-only** analyst. Never mutates external systems (GitHub/ClickUp/Slite/Figma) — it may only read. It *may* write local report files (e.g. `.tmp/<task-id>/analysis-handoff.json`).
+A deep-reading, **read-only** analyst. Never mutates external systems (GitHub or the `task` / `documentation` / `ux` category sources) — it may only read. It *may* write local report files (e.g. `.tmp/<task-id>/analysis-handoff.json`).
 
 - Cross-document comparison, source-code audits, task-board triage, risk assessment, and PR/commit analysis.
 - Always closes with a structured summary: analysis type, sources read, key findings, gaps/risks, recommended actions, local artifacts.

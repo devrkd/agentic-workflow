@@ -20,18 +20,18 @@ Written by the Architect **only after human ADR approval**, and only when a real
 | `task_id` | yes | Same identifier as the slash-command argument (e.g. `RTD-541`) |
 | `adr_url` | yes | The approved ADR's URL/reference (mandatory — the Developer halts without it) |
 | `adr_approved_at` | yes | ISO-8601 timestamp of the human approval |
-| `skip_clickup` | no | When `true`, sub-task `id`/`url` may be `null` and FRs are referenced by label only |
-| `figma_frames` | no | Figma frame URLs + summaries when Figma was used in planning |
-| `sub_tasks[]` | yes (≥1) | One entry per FR: `fr`, `branch`, `scope`, `acceptance_criteria[]`, `verification_commands[]`; optional `id`/`url` (ClickUp), `worktree_backend`/`worktree_frontend` |
+| `skip_task_tracking` | no | When `true`, sub-task `id`/`url` may be `null` and FRs are referenced by label only |
+| `design_frames` | no | Design frame URLs + summaries when a UX/design source was used in planning |
+| `sub_tasks[]` | yes (≥1) | One entry per FR: `fr`, `branch`, `scope`, `acceptance_criteria[]`, `verification_commands[]`; optional `id`/`url` (task source), `worktree_backend`/`worktree_frontend` |
 
 Example (abridged):
 
 ```json
 {
   "task_id": "RTD-541",
-  "adr_url": "https://slite.com/api/notes/example-adr-id",
+  "adr_url": "https://docs.example.com/notes/example-adr-id",
   "adr_approved_at": "2026-05-08T12:00:00Z",
-  "skip_clickup": true,
+  "skip_task_tracking": true,
   "sub_tasks": [
     {
       "id": null,
@@ -46,14 +46,14 @@ Example (abridged):
 }
 ```
 
-> Note: the example uses a Slite URL because the schema predates the opencode harness. Under opencode (Slite not wired), the Architect writes ADRs locally (e.g. `.tmp/<task-id>/adr.md`) and records that reference in `adr_url`.
+> Note: the example uses a generic URL because the schema predates the opencode harness. Under opencode (no documentation provider bound by default), the Architect writes ADRs locally (e.g. `.tmp/<task-id>/adr.md`) and records that reference in `adr_url`.
 
 ## `state.json` — Orchestrator-maintained task state
 
 Schema: [schemas/state.v1.json](https://github.com/devrkd/mentat/blob/main/schemas/state.v1.json). Tracks overall task status and per-FR progress:
 
 - Top level: `task_id`, `status` (`pending` / `in_progress` / `completed` / `blocked`), optional `adr_approved_at`.
-- `sub_tasks[]`: `fr`, `status` (`pending` / `in_progress` / `changes_requested` / `completed` / `blocked`), optional `branch`, `pr_url`, `review_verdict`, `reviewed_at`, `figma_conflict_resolution` (`figma` / `adr`), `blockers[]`.
+- `sub_tasks[]`: `fr`, `status` (`pending` / `in_progress` / `changes_requested` / `completed` / `blocked`), optional `branch`, `pr_url`, `review_verdict`, `reviewed_at`, `design_conflict_resolution` (`design` / `adr`), `blockers[]`.
 
 ## `.tmp/` lifecycle
 
