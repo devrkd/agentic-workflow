@@ -1,7 +1,7 @@
 # Skill: architect.outcome-verifier
 
 ## Purpose
-Verify that the full set of implemented sub-tasks satisfies the original requirements and produce a final verdict for the Orchestrator and ClickUp main task.
+Verify that the full set of implemented sub-tasks satisfies the original requirements and produce a final verdict for the Orchestrator and the main task.
 
 ## When to Run
 - After all sub-tasks have been approved by `architect.progress-review`.
@@ -9,16 +9,16 @@ Verify that the full set of implemented sub-tasks satisfies the original require
 - May also be run standalone for post-implementation audits.
 
 ## Inputs
-- Source requirement note (Slite doc URL from handoff)
+- Source requirement note (documentation URL from handoff)
 - Approved ADR (`adr_url`)
 - All Developer change reports (one per sub-task)
 - All `architect.progress-review` verdicts and evidence tables
-- ClickUp main task ID/URL
+- Main task ID/URL
 
 ## Steps
 
 ### 1. Compile requirement list
-Fetch the Slite requirement doc and extract every functional requirement (FR1, FR2, ...) and any non-functional constraints (performance, security, observability). This is the master checklist.
+Fetch the requirement document via the documentation MCP and extract every functional requirement (FR1, FR2, ...) and any non-functional constraints (performance, security, observability). This is the master checklist.
 
 ### 2. Build evidence map
 For each requirement, collect all evidence from change reports and progress-review verdicts:
@@ -47,8 +47,8 @@ Flag any gap as a partial match or mismatch.
 - **Partially satisfied** — one or more Partial matches; no Mismatches; document all gaps.
 - **Not satisfied** — one or more Mismatches; list with severity and required remediation.
 
-### 6. Post summary to ClickUp main task
-Post a comment on the main ClickUp task (via ClickUp MCP) with:
+### 6. Post summary to main task
+Post a comment on the main task (via the task MCP) with:
 - First line: AI disclaimer (see `rules/disclaimers.md`)
 - Final verdict
 - Requirement-to-evidence table
@@ -60,4 +60,4 @@ Post a comment on the main ClickUp task (via ClickUp MCP) with:
 - Final verdict: fully satisfied / partially satisfied / not satisfied
 - Gap list with severity
 - Observability completeness check
-- ClickUp main task comment URL
+- Main task comment URL

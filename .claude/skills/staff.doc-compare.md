@@ -1,22 +1,22 @@
 # Skill: staff.doc-compare
 
 ## Purpose
-Compare two or more Slite documents to surface gaps, contradictions, coverage overlaps, and missing requirements. Read-only — never modifies any document.
+Compare two or more documents to surface gaps, contradictions, coverage overlaps, and missing requirements. Read-only — never modifies any document.
 
 ## When to Run
-- Two or more Slite doc IDs or URLs are provided
+- Two or more doc IDs or URLs are provided
 - User asks: "compare", "find gaps", "is this consistent", "does X cover Y", "what's missing between"
 - ADR vs requirement doc alignment check
 - Spec vs design doc consistency review
 
 ## Inputs
-- Two or more Slite doc IDs or URLs (required)
+- Two or more doc IDs or URLs (required)
 - Optional: comparison axis (e.g. "requirements coverage", "API contract alignment", "scope overlap")
 
 ## Steps
 
 ### 1. Fetch all documents
-Fetch each document via Slite MCP. Record:
+Fetch each document via the documentation MCP. Record:
 - Document title
 - Last modified timestamp
 - Section headings (top-level structure)

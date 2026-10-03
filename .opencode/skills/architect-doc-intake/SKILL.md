@@ -1,6 +1,6 @@
 ---
 name: architect-doc-intake
-description: Collect source-of-truth requirements from documentation systems (e.g. Slite) before planning, extracting requirements, constraints, and embedded repo URLs. Use when the architect needs to read spec or requirement documents.
+description: Collect source-of-truth requirements from documentation systems before planning, extracting requirements, constraints, and embedded repo URLs. Use when the architect needs to read spec or requirement documents.
 ---
 
 # Skill: architect-doc-intake
@@ -8,7 +8,7 @@ description: Collect source-of-truth requirements from documentation systems (e.
 ## Purpose
 Collect source-of-truth requirements from documentation systems before planning.
 
-> **MCP availability:** Slite is **not** wired in this opencode setup. If no doc MCP is available, ask the user to paste the relevant document content or provide a locally readable file, and proceed from that.
+> **MCP availability:** the `documentation` category is **not** bound to an MCP server in this opencode setup. If no documentation source is configured, ask the user to paste the relevant document content or provide a locally readable file, and proceed from that.
 
 ## Inputs
 - Documentation URL(s), ID(s), or query terms (optional)

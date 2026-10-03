@@ -10,13 +10,13 @@ Read a local repo clone (or GitHub via MCP fallback) and compare the actual code
 
 ## Inputs
 - Repo path (local clone under `.tmp/<task-id>/repos/` or `.repos/<repo-name>/`) OR GitHub repo URL
-- Reference document URL or ID (Slite ADR, spec doc, or design note)
+- Reference document URL or ID (ADR, spec doc, or design note)
 - Optional: specific FR label or scope to focus the audit
 
 ## Steps
 
 ### 1. Fetch the reference document
-Read the Slite doc (or ADR) via Slite MCP. Extract:
+Read the reference doc (or ADR) via the documentation MCP. Extract:
 - Functional requirements or acceptance criteria
 - Expected file paths, module names, API endpoints
 - Data models, config keys, metric names

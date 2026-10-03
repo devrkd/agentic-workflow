@@ -1,15 +1,15 @@
 # Skill: architect.progress-review
 
 ## Purpose
-Assess whether Developer progress for a single sub-task follows the approved ADR scope for the assigned FR, and post a review comment on the sub-task's ClickUp ticket.
+Assess whether Developer progress for a single sub-task follows the approved ADR scope for the assigned FR, and post a review comment on the sub-task's ticket.
 
 ## Inputs
 - Approved ADR (`adr_url`) — read the FR-specific section
-- Sub-task entry from Architect handoff (fr label, sub-task ClickUp ID/URL, scope, acceptance criteria)
+- Sub-task entry from Architect handoff (fr label, sub-task ID/URL, scope, acceptance criteria)
 - Developer change report (files touched, what changed, why, validation results, branch, PR URL)
 
 ## Steps
-1. Fetch and read the ADR section for the assigned FR via Slite MCP.
+1. Fetch and read the ADR section for the assigned FR via the documentation MCP.
 2. Compare changed files to the sub-task scope — check for out-of-scope edits or missing planned changes.
 3. Map each acceptance criterion from the sub-task entry to implementation evidence in the change report.
 4. Review validation coverage: confirm the verification commands were run and passed.
@@ -24,8 +24,8 @@ Assess whether Developer progress for a single sub-task follows the approved ADR
      - Validation results summary
      - If changes requested: list of gaps with severity (critical / major / minor) and exact description
      - PR URL (from Developer change report)
-7. Post the review comment on the **sub-task's ClickUp ticket** (not the main task) via ClickUp MCP.
-8. Return the verdict and the ClickUp comment URL to the Orchestrator.
+7. Post the review comment on the **sub-task's ticket** (not the main task) via the task MCP.
+8. Return the verdict and the task comment URL to the Orchestrator.
 
 ## Output
 - Verdict: approved / changes requested
@@ -33,4 +33,4 @@ Assess whether Developer progress for a single sub-task follows the approved ADR
 - Scope alignment findings
 - Validation results summary
 - Gap list with severity (if changes requested)
-- ClickUp sub-task comment URL confirming the review was posted
+- Sub-task comment URL confirming the review was posted

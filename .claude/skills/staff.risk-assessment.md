@@ -10,9 +10,9 @@ Produce a structured risk and impact assessment for a proposed change, feature, 
 - When a change touches shared infrastructure, APIs, or high-traffic code paths
 
 ## Inputs
-- Primary subject: ADR URL, Slite doc URL, PR URL, or free-form description of the change
+- Primary subject: ADR URL, documentation page URL, PR URL, or free-form description of the change
 - Optional: repo path or GitHub URL for code context
-- Optional: ClickUp task ID for scope and timeline context
+- Optional: task ID for scope and timeline context
 
 ## Steps
 

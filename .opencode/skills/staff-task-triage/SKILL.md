@@ -1,7 +1,14 @@
-# Skill: staff.clickup-triage
+---
+name: staff-task-triage
+description: Read task-board tasks from the configured task category source and produce a structured sprint or backlog summary — statuses, blockers, assignees, dependencies, and risk signals. Read-only; use for what's blocked, in progress, or at risk.
+---
+
+# Skill: staff-task-triage
 
 ## Purpose
-Read ClickUp tasks and produce a structured sprint or backlog summary — statuses, blockers, assignees, dependencies, and risk signals. Read-only — never creates, updates, or comments on any task.
+Read task-board tasks from the configured `task` category source and produce a structured sprint or backlog summary — statuses, blockers, assignees, dependencies, and risk signals. Read-only — never creates, updates, or comments on any task.
+
+> **MCP availability:** the `task` category is **not** bound to an MCP server in this opencode setup. If no task source is configured, tell the user and ask them to export the tasks (CSV/JSON) or paste the relevant list; run the same analysis on that data.
 
 ## When to Run
 - User asks: "what's blocked", "what's in progress", "summarise the sprint", "triage the backlog", "what's at risk"
@@ -9,14 +16,14 @@ Read ClickUp tasks and produce a structured sprint or backlog summary — status
 - Dependency or bottleneck analysis across a set of tasks
 
 ## Inputs
-- ClickUp list ID, folder ID, or space ID (required) — or a set of task IDs/URLs
+- List ID, folder ID, or space ID — or a set of task IDs/URLs (or exported task data)
 - Optional: filter by assignee, status, or label
 - Optional: focus question (e.g. "what's blocking the release", "which tasks are overdue")
 
 ## Steps
 
 ### 1. Fetch tasks
-Use ClickUp MCP to fetch tasks in scope. For each task collect:
+Fetch tasks in scope via the configured `task` MCP. For each task collect:
 - ID, title, status, assignee(s), due date, priority
 - Sub-tasks (IDs and statuses)
 - Dependencies (blocking / blocked-by)
@@ -79,4 +86,4 @@ Recommended actions: (priority order)
 - Stale task list
 - Risk signals (AI tasks, orphaned sub-tasks, etc.)
 - Recommended actions ordered by priority
-- Local artifact path if report written to `.tmp/analysis/`
+- Local artifact path if the report was written to `.tmp/analysis/`

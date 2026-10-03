@@ -12,7 +12,7 @@ Implement the approved design for the assigned FR with focused, low-risk diffs t
 - Sub-task entry from `handoff.json` (`fr`, `scope`, `acceptance_criteria`, `verification_commands`, `branch`, `worktree_*`)
 - Approved ADR (`adr_url`) — read the FR-specific section before writing any code
 - Repo intel record (language, framework, build tool, directory conventions)
-- Figma design summary (if `figma_frames` present in handoff — run `developer-figma-intake` first)
+- UX/design summary (if `design_frames` present in handoff — run `developer-ux-intake` first)
 
 ## Pre-flight Checks
 Before writing any code:

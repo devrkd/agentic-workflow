@@ -4,7 +4,7 @@
 Inspect target repositories to produce accurate, language-specific design and code guidance. This skill is a **hard gate** — the Architect must not produce a design, code change list, or ADR until repo intel is confirmed. Guessing the tech stack is not permitted.
 
 ## Inputs
-- Repo hints from ClickUp task details or Slite doc (org default: `your-org`)
+- Repo hints from task details or source doc (org default: `your-org`)
 - **`task_id`** for `.tmp/<task-id>/` paths
 - **Local clone** from `architect.local-repo-clone` (preferred)
 - GitHub MCP (fallback only when local clone failed or unavailable)
@@ -34,9 +34,9 @@ If clone failed, proceed to step 2 using **GitHub MCP fallback** only for that r
 Repo URLs and hints may come from any of the following sources — check all before falling back to the user:
 
 1. **Invocation input** — explicit `Repo:` or `repo_url:` field, or any bare `github.com/<owner>/<repo>` URL provided directly.
-2. **Slite doc** (from `doc-intake` output) — `repo_urls_in_doc` list extracted from the document body.
-3. **ClickUp task** (from `task-intake` output) — `repo_urls_in_task` list extracted from the task description or links.
-4. **Implicit org default** — if only a repo name (no owner) is found in ClickUp or Slite context, normalize to `your-org/<repo-name>`.
+2. **Documentation page** (from `doc-intake` output) — `repo_urls_in_doc` list extracted from the document body.
+3. **Task** (from `task-intake` output) — `repo_urls_in_task` list extracted from the task description or links.
+4. **Implicit org default** — if only a repo name (no owner) is found in task or doc context, normalize to `your-org/<repo-name>`.
 
 - Parse any `github.com/<owner>/<repo>` URL found in any source; strip trailing path segments (e.g. `/tree/main`) to obtain the canonical `owner/repo`.
 - Normalize to `owner/repo` (default org: `your-org`).
@@ -78,7 +78,7 @@ b. **Read relevant files** — for each candidate, Read under `local_path`:
 
 c. **Test coverage pattern** — Read one nearby test file for structure and mocking style.
 
-d. **Design-vs-code audits** — when comparing a Slite/design doc to code:
+d. **Design-vs-code audits** — when comparing a documentation/design doc to code:
    - Extract concrete deliverables from the doc (SBE message ids, REST paths, table names, config keys, services)
    - For each deliverable, `rg` under `local_path` and record **implemented** | **partial** | **missing**
    - Cite file paths relative to repo root (e.g. `services/rfq-engine/...`)
